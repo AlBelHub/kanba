@@ -1,0 +1,47 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html, body {
+    height: 100vh;
+    overflow: hidden; /* Убираем прокрутку страницы */
+  }
+  
+  .scroll-wrapper {
+    position: relative; /* Убираем фиксированное положение */
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: flex-start;
+    background: #c0c0c0;
+    overflow-x: auto; /* Горизонтальный скролл */
+    padding: 0 2vw; /* Добавляем отступы слева и справа для скролла */
+    margin-bottom: 2vh; /* Немного пространства снизу */
+  }
+  
+  .columns-container {
+    display: flex;
+    gap: 4rem; /* Интервал между колонками */
+    align-items: flex-start; /* Колонки не растягиваются по высоте */
+    min-width: 15%;
+  }
+  
+  .column {
+    flex: 0 0 25rem; /* Используем relative width */
+    min-width: 20rem; /* Минимальная ширина */
+
+  }
+
+  .body-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 10%;
+}
+
+  .task {
+
+  }
+  

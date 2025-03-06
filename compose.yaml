@@ -1,0 +1,35 @@
+﻿services:
+  backend:
+    image: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=mydatabase;Username=postgres;Password=postgres
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydatabase
+
+  frontend:
+    image: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app  # Монтируем локальную папку внутрь контейнера
+      - /app/node_modules  # Исключаем node_modules, чтобы они не перезаписывались
+    working_dir: /app
+    command: ["sh", "-c", "npm install && npm run dev -- --host"]
+    depends_on:
+      - backend
+
+    
