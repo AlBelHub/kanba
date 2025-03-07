@@ -174,42 +174,73 @@ function App() {
 
     <>
     
-
-    <div className="scroll-wrapper" ref={scrollRef}>
-      <div className="columns-container">
-        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <SortableContext items={columns.map((col) => col.id)}>
-            {columns.map((col) => (
-              <Columns
-                key={col.id}
-                colId={col.id}
-                colName={col.title}
-                tasks={col.tasks}
-                setColumns={setColumns}
-              />
-            ))}
-          </SortableContext>
-
-          <DragOverlay>
-            {activeTask ? (
-              <TaskItem
-              task={activeTask}
-              columnId={activeTask.columnId}
-                taskIndex={0}
-              />
-            ) : activeColumn ? (
-              <Columns
-              colId={activeColumn.id}
-                colName={activeColumn.title}
-                tasks={activeColumn.tasks}
-                setColumns={setColumns}
-              />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-        <div className="AddButton" onClick={handleAddColumn}>TEST ADD</div>
+    <div className="main">
+      <div className="topbar">
+        <div className="topbar-logo">
+          <h1>logo</h1>
+        </div>
+        <div className="topbar-content">
+          table nameeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        </div>
       </div>
+
+      <div className="flex-column">
+        <div className="sidebar">
+
+          <h4>TASK LIST</h4>
+
+          <button >
+            <p>Тут чисто случайно может оказатся очень много текста</p>
+          </button>
+
+        </div>
+        <div className="app">
+
+        <div className="scroll-wrapper" ref={scrollRef}>
+        <div className="columns-container">
+          <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            <SortableContext items={columns.map((col) => col.id)}>
+              {columns.map((col) => (
+                <Columns
+                  key={col.id}
+                  colId={col.id}
+                  colName={col.title}
+                  tasks={col.tasks}
+                  setColumns={setColumns}
+                />
+              ))}
+            </SortableContext>
+
+            <DragOverlay>
+              {activeTask ? (
+                <TaskItem
+                task={activeTask}
+                columnId={activeTask.columnId}
+                  taskIndex={0}
+                />
+              ) : activeColumn ? (
+                <Columns
+                colId={activeColumn.id}
+                  colName={activeColumn.title}
+                  tasks={activeColumn.tasks}
+                  setColumns={setColumns}
+                />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+          <div className="AddButton" onClick={handleAddColumn}>TEST ADD</div>
+        </div>
+      </div>
+
+        </div>
+      </div>
+    
+    
     </div>
+    
+
+
+    
               </>
   );
 }

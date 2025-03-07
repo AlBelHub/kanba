@@ -39,7 +39,7 @@ const TaskItem: React.FC<TaskProps> = ({ task, columnId, taskIndex }) => {
       </div>
       <div className="window-body">
         <p>ЗАДАЧА {taskIndex + 1}</p>
-        <p>АВТОР</p>
+        <p>{task.title}</p>
       </div>
     </div>
   );

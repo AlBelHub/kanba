@@ -34,16 +34,11 @@ export default function Columns({ colId, colName, tasks, setColumns }: ColumnPro
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    width: "250px",
-    minWidth: "250px",
-    maxWidth: "250px",
-    display: "inline-block",
+    display: "block",
     verticalAlign: "top",
-    margin: "0 10px",
     opacity: isDragging ? 0.5 : 1,
     cursor: "grab",
-    boxSizing: "border-box",
-    minHeight: "100vh", // Минимальная высота, чтобы не схлопывалось
+    minHeight: "100rem", //Не должно так быть! 
   };
 
   const handleAddTask = () => {

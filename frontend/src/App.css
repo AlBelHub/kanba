@@ -1,47 +1,102 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  html, body {
-    height: 100vh;
-    overflow: hidden; /* Убираем прокрутку страницы */
-  }
-  
-  .scroll-wrapper {
-    position: relative; /* Убираем фиксированное положение */
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: flex-start;
-    background: #c0c0c0;
-    overflow-x: auto; /* Горизонтальный скролл */
-    padding: 0 2vw; /* Добавляем отступы слева и справа для скролла */
-    margin-bottom: 2vh; /* Немного пространства снизу */
-  }
-  
-  .columns-container {
-    display: flex;
-    gap: 4rem; /* Интервал между колонками */
-    align-items: flex-start; /* Колонки не растягиваются по высоте */
-    min-width: 15%;
-  }
-  
-  .column {
-    flex: 0 0 25rem; /* Используем relative width */
-    min-width: 20rem; /* Минимальная ширина */
 
-  }
-
-  .body-settings {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-width: 10%;
+:root {
+  --sidebar-width: 17rem;
+  --topbar-height: 6rem;
 }
 
-  .task {
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-  }
-  
+html, body {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background-color: blue;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  background-color: red;
+  height: var(--topbar-height); 
+  flex-shrink: 0;
+}
+
+.topbar-logo {
+  width: var(--sidebar-width);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: yellow;
+}
+
+.topbar-content {
+  flex: 1; /* Занимает оставшееся пространство */
+  min-width: 0; /* Чтобы текст не ломал макет */
+  height: var(--topbar-height);
+  color: white;
+  background-color: blueviolet;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis; /* Добавляет "..." при обрезании текста */
+  padding: 0 1rem;
+}
+
+
+.flex-column {
+  display: flex;
+  flex: 1;
+  overflow: hidden; 
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: green;
+  flex-shrink: 0;
+}
+
+.app {
+  flex: 1;
+  background-color: gold;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scroll-wrapper {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  background: #c0c0c0;
+  padding: 1rem;
+}
+
+.columns-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  min-width: 15%;
+}
+
+.column {
+  flex: 0 0 25rem;
+  min-width: 20rem;
+}
+
+.body-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 10%;
+}
