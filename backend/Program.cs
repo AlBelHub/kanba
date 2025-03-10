@@ -1,6 +1,7 @@
 using System.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Dapper;
 using static BCrypt.Net.BCrypt;
@@ -57,8 +58,23 @@ public class Program
                 }
             });
         });
+
+        builder.Services.AddCors(options =>
+        {
+            options.AddPolicy("AllowFrontend", policy =>
+            {
+                policy.WithOrigins(
+                        "http://localhost:5173",
+                        "http://172.20.0.4:5173",
+                        "http://kanba-frontend-1:5173")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
+
         
-        builder.Services.AddSingleton<IDbConnection>(_ =>
+        builder.Services.AddScoped<IDbConnection>(_ =>
         {
             var connectionString = builder.Configuration.GetConnectionString("Postgres")
                                    ?? throw new InvalidOperationException("Postgres connection string is missing.");
@@ -84,6 +100,23 @@ public class Program
         
         var app = builder.Build();
 
+        app.UseCors("AllowFrontend");
+
+        app.Use((context, next) =>
+        {
+            if (context.Request.Method == "OPTIONS")
+            {
+                context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                context.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
+                return context.Response.WriteAsync("handled");
+            }
+            return next.Invoke();
+        });
+        
+        app.UseRouting();
+        
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
@@ -159,30 +192,141 @@ public class Program
             return Results.Ok(users);
         });
 
+        //TODO: Выключить этот метод
         app.MapGet("/spaces", async (IDbConnection db) =>
         {
             var spaces = await db.QueryAsync("SELECT id, name, user_id FROM Spaces");
             return Results.Ok(spaces);
         });
 
-        app.MapGet("/boards", async (IDbConnection db) =>
+        app.MapGet("/spaces/{user_id}", async (IDbConnection db, int userId) =>
         {
-            var boards = await db.QueryAsync("SELECT id, name, space_id, owner_id FROM Boards");
+            var spaces = await db.QueryAsync("SELECT id, name, user_id FROM Spaces WHERE user_id = @user_id", new { user_id = userId });
+            //return
+        });
+
+        app.MapGet("/boards/{space_id}", async (int space_id, IDbConnection db) =>
+        {
+            var boards = 
+                await db.QueryAsync("SELECT id, name, space_id, owner_id FROM Boards WHERE space_id = @space_id", 
+                    new { space_id = space_id });
             return Results.Ok(boards);
         });
 
-        app.MapGet("/columns", async (IDbConnection db) =>
+        app.MapGet("/columns/{board_id}", [Authorize] async (int board_id, IDbConnection db) =>
         {
-            var columns = await db.QueryAsync("SELECT id, board_id, title, created_by FROM Columns");
+            var columns = 
+                await db.QueryAsync("SELECT id, board_id, title, created_by FROM Columns WHERE board_id = @board_id", 
+                new { board_id = board_id });
             return Results.Ok(columns);
         });
 
+        /// /columnMove?ColumnId=1&OldPosition=2&NewPosition=3&SpaceId=1&BoardId=1
+        app.MapGet("/columnMove", async (int ColumnId, int OldPosition, int NewPosition, int SpaceId, int BoardId, IDbConnection db) =>
+        {
+            if (db.State != ConnectionState.Open)
+            {
+                db.Open();
+            }
+
+            using var transaction = db.BeginTransaction();
+
+            try
+            {
+                // 1. Проверяем, существует ли колонка с заданным ColumnId
+                var columnExists = await db.ExecuteScalarAsync<bool>(
+                    "SELECT EXISTS (SELECT 1 FROM columns WHERE id = @ColumnId AND board_id = @BoardId)",
+                    new { ColumnId, BoardId });
+
+                if (!columnExists)
+                {
+                    return Results.NotFound(new { message = "Column not found in the specified board" });
+                }
+
+                // 2. Если колонка переместилась вниз
+                if (OldPosition < NewPosition)
+                {
+                    await db.ExecuteAsync(
+                        "UPDATE columns SET position = position - 1 WHERE position > @OldPosition AND position <= @NewPosition AND board_id = @BoardId",
+                        new { OldPosition, NewPosition, BoardId }, transaction);
+                }
+                // 3. Если колонка переместилась вверх
+                else if (OldPosition > NewPosition)
+                {
+                    await db.ExecuteAsync(
+                        "UPDATE columns SET position = position + 1 WHERE position < @OldPosition AND position >= @NewPosition AND board_id = @BoardId",
+                        new { OldPosition, NewPosition, BoardId }, transaction);
+                }
+
+                // 4. Обновляем позицию перемещённой колонки
+                await db.ExecuteAsync(
+                    "UPDATE columns SET position = @NewPosition WHERE id = @ColumnId AND board_id = @BoardId",
+                    new { ColumnId, NewPosition, BoardId }, transaction);
+
+                transaction.Commit();
+                return Results.Ok(new { message = "Column position updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                return Results.BadRequest(new { message = "Failed to update column position", error = ex.Message });
+            }
+        });
+
+
+        //Найти все таски в борде, поменять местами
+        
+        
         app.MapGet("/tasks", async (IDbConnection db) =>
         {
             var tasks = await db.QueryAsync("SELECT id, column_id, title, description, status, created_by, assigned_to FROM Tasks");
             
             return Results.Ok(tasks);
         });
+
+        app.MapGet("/columns_with_tasks/{spaceId}/{boardId}", async (int spaceId, int boardId, IDbConnection db) =>
+        {
+            var sql = @"
+                SELECT 
+                    c.id AS ColumnId,
+                    c.title AS ColumnTitle,
+                    c.position AS ColumnPosition,
+                    t.id AS TaskId,
+                    t.title AS TaskTitle,
+                    t.board_id AS BoardId,
+                    t.position AS TaskPosition
+                FROM columns c
+                LEFT JOIN tasks t ON c.id = t.column_id
+                WHERE c.board_id = @boardId
+                AND EXISTS (
+                    SELECT 1 FROM boards b 
+                    WHERE b.id = @boardId 
+                    AND b.space_id = @spaceId
+                )";
+
+            var rows = await db.QueryAsync<ColumnTaskRow>(sql, new { spaceId, boardId });
+            
+            // Группируем задачи по колонкам
+            var columns = rows.GroupBy(r => new { r.ColumnId, r.ColumnTitle, r.ColumnPosition })
+                .OrderBy(g => g.Key.ColumnPosition)
+                .Select(g => new Column
+                {
+                    Id = g.Key.ColumnId.ToString() + "c", //Без добавления типа начнутся коллизии между колонками и тасками
+                    Title = g.Key.ColumnTitle,
+                    Position = g.Key.ColumnPosition,
+                    Tasks = g.Where(t => t.TaskId.HasValue)
+                        .OrderBy(t => t.TaskPosition)
+                        .Select(t => new TaskItem
+                        {
+                            Id = t.TaskId?.ToString() + "t", //Без добавления типа начнутся коллизии между колонками и тасками
+                            Position = t.TaskPosition,
+                            Title = t.TaskTitle
+                        }).ToList()
+                }).ToList();
+
+            return Results.Ok(columns);
+        });
+
         
         EnsureDatabaseCreated(app.Services.GetRequiredService<IDbConnection>());
         
@@ -245,24 +389,26 @@ public class Program
                id serial primary key,
                board_id int REFERENCES Boards(id) ON DELETE CASCADE,
                title varchar(50) not null,
+               position int not null,
                created_by int REFERENCES Users(id) ON DELETE SET NULL,
                created_at timestamp default current_timestamp
             );";
             db.Execute(createColumns);
 
-            // Таблица для задач в колонке
             string createTasks = @"
-            CREATE TABLE IF NOT EXISTS Tasks (
-               id serial primary key,
-               column_id int REFERENCES Columns(id) ON DELETE CASCADE,
-               title varchar(100) not null,
-               description text,
-               status varchar(20) not null check (status in ('open', 'in progress', 'done')),
-               created_by int REFERENCES Users(id) ON DELETE SET NULL,
-               assigned_to int REFERENCES Users(id) ON DELETE SET NULL,
-               created_at timestamp default current_timestamp,
-               updated_at timestamp default current_timestamp
-            );";
+                    CREATE TABLE IF NOT EXISTS Tasks (
+                       id serial primary key,
+                       column_id int REFERENCES Columns(id) ON DELETE CASCADE,
+                       board_id int REFERENCES Boards(id) ON DELETE CASCADE, -- Новое поле
+                       title varchar(100) not null,
+                       description text,
+                       status varchar(20) not null check (status in ('open', 'in progress', 'done')),
+                       position int not null,
+                       created_by int REFERENCES Users(id) ON DELETE SET NULL,
+                       assigned_to int REFERENCES Users(id) ON DELETE SET NULL,
+                       created_at timestamp default current_timestamp,
+                       updated_at timestamp default current_timestamp
+                    );";
             db.Execute(createTasks);
 
             // Таблица логов для отслеживания изменений в задачах
@@ -296,26 +442,86 @@ public class Program
                  Console.WriteLine("Inserted default space");
 
                  // Создаём доску внутри пространства (space_id = 1) с owner_id пользователя 1
-                 db.Execute("INSERT INTO Boards (name, space_id, owner_id) VALUES (@Name, @SpaceId, @OwnerId)",
-                            new { Name = "My Board", SpaceId = 1, OwnerId = 1 });
-                 Console.WriteLine("Inserted default board");
+                 var boards = new[]
+                 {
+                     new { Name = "Web Development", SpaceId = 1, OwnerId = 1 },
+                     new { Name = "Mobile App", SpaceId = 1, OwnerId = 1 },
+                     new { Name = "Marketing Campaign", SpaceId = 1, OwnerId = 1 },
+                     new { Name = "UX/UI Design", SpaceId = 1, OwnerId = 1 }
+                 };
 
-                 // Создаём колонку для доски (board_id = 1)
-                 db.Execute("INSERT INTO Columns (board_id, title, created_by) VALUES (@BoardId, @Title, @CreatedBy)",
-                            new { BoardId = 1, Title = "To Do", CreatedBy = 1 });
-                 Console.WriteLine("Inserted default column");
+                 Random rand = new Random();
 
-                 // Создаём задачу в колонке (column_id = 1)
-                 db.Execute("INSERT INTO Tasks (column_id, title, description, status, created_by, assigned_to) VALUES (@ColumnId, @title, @Description, @Status, @CreatedBy, @AssignedTo)",
-                            new {
-                                ColumnId = 1,
-                                Title = "first start task",
+                foreach (var board in boards)
+                {
+                    // Вставляем доску, если её нет
+                    db.Execute(@"
+                        INSERT INTO Boards (name, space_id, owner_id) 
+                        SELECT @Name, @SpaceId, @OwnerId
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM Boards 
+                            WHERE name = @Name AND space_id = @SpaceId
+                        )",
+                        board);
+
+                    Console.WriteLine($"Inserted board: {board.Name}");
+
+                    // Получаем ID доски
+                    int boardId = db.ExecuteScalar<int>(
+                        "SELECT id FROM Boards WHERE name = @Name AND space_id = @SpaceId",
+                        new { board.Name, board.SpaceId });
+
+                    int columnCount = rand.Next(3, 6); // От 3 до 5 колонок на борде
+
+                    for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++)
+                    {
+                        db.Execute("INSERT INTO Columns (board_id, title, created_by, position) VALUES (@BoardId, @Title, @CreatedBy, @Position)",
+                            new { BoardId = boardId, Title = $"Column {columnIndex}", CreatedBy = 1, Position = columnIndex });
+
+                        // Получаем ID созданной колонки
+                        int columnId = db.ExecuteScalar<int>(
+                            "SELECT id FROM Columns WHERE board_id = @BoardId AND title = @Title",
+                            new { BoardId = boardId, Title = $"Column {columnIndex}" });
+
+                        int taskCount = rand.Next(5, 11); // От 5 до 10 задач на колонку
+
+                        for (int taskIndex = 1; taskIndex <= taskCount; taskIndex++)
+                        {
+                            db.Execute(@"
+                                INSERT INTO Tasks (
+                                    column_id, 
+                                    board_id, 
+                                    title, 
+                                    description, 
+                                    status, 
+                                    position,
+                                    created_by, 
+                                    assigned_to
+                                ) VALUES (
+                                    @ColumnId,
+                                    @BoardId,
+                                    @Title, 
+                                    @Description, 
+                                    @Status, 
+                                    @Position,
+                                    @CreatedBy, 
+                                    @AssignedTo
+                                )", new {
+                                ColumnId = columnId,
+                                BoardId = boardId,
+                                Title = $"Task {taskIndex} in Column {columnIndex}",
                                 Description = "This is a sample task.",
                                 Status = "open",
+                                Position = taskIndex,
                                 CreatedBy = 1,
                                 AssignedTo = 1
                             });
-                 Console.WriteLine("Inserted default task");
+
+                            Console.WriteLine($"Inserted task {taskIndex} in column {columnIndex} on board {boardId}");
+        }
+    }
+}
+
             }
         }
         
@@ -326,4 +532,31 @@ public class Program
         public string username { get; set; }
         public string password { get; set; }
     }
+    
+    public class ColumnTaskRow
+    {
+        public int ColumnId { get; set; }
+        public string ColumnTitle { get; set; }
+        public string ColumnPosition { get; set; } // Позиция колонки
+        public int? TaskId { get; set; }
+        public string TaskTitle { get; set; }
+        public int BoardId { get; set; }
+        public string TaskPosition { get; set; } // Позиция задачи
+    }
+
+    public class Column
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string? Position { get; set; } // Позиция колонки
+        public List<TaskItem> Tasks { get; set; }
+    }
+
+    public class TaskItem
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string? Position { get; set; } // Позиция задачи
+    }
+
 }
