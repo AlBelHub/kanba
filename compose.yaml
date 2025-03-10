@@ -4,10 +4,15 @@
     build:
       context: ./backend
       dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
     environment:
       - ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=mydatabase;Username=postgres;Password=postgres
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    networks:
+      - kanba-network
 
   postgres:
     image: postgres:latest
@@ -16,6 +21,14 @@
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mydatabase
+    networks:
+      - kanba-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mydatabase -h localhost -p 5432"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 5s
 
   frontend:
     image: frontend
@@ -25,11 +38,15 @@
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app  # Монтируем локальную папку внутрь контейнера
-      - /app/node_modules  # Исключаем node_modules, чтобы они не перезаписывались
+      - ./frontend:/app
+      - /app/node_modules
     working_dir: /app
     command: ["sh", "-c", "npm install && npm run dev -- --host"]
     depends_on:
       - backend
+    networks:
+      - kanba-network
 
-    
+networks:
+  kanba-network:
+    driver: bridge
