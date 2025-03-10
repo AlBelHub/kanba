@@ -80,7 +80,7 @@ export default function Columns({ colId, colName, tasks, setColumns }: ColumnPro
               />
             ))}
           </SortableContext>
-          <button className="testTaskAdd" onClick={handleAddTask}>Добавить задачу!</button>
+          <button className="testTaskAdd hover_darkgray" onClick={handleAddTask}>Добавить задачу!</button>
         </div>
       </div>
     </div>

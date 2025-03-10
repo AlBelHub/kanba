@@ -6,34 +6,52 @@ import {
   DragStartEvent,
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
-import { Column, Task } from "./Types/types";
+import { Column,} from "./Types/types";
 import "98.css";
 import "./App.css";
 import Columns from "./Components/Columns";
 import TaskItem from "./Components/TaskItem";
+import Sidebar from "./Sidebar";
+import fetchData from "./Utils/Api";
 
 function App() {
+
+  const TEST_DATA__SPACE_ID = 1;
+  const TEST_DATA__BOARD_ID = 1;
+
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [columns, setColumns] = useState<Column[]>([
     {
       id: "todo",
-      title: "To Do",
-      tasks: [{ id: "task-1", title: "Первая задача" }],
+      title: "Видать",
+      position: 1,
+      tasks: [{ id: "task-1", title: "Первая задача", position: 1 }],
     },
     {
       id: "done",
-      title: "Done",
-      tasks: [{ id: "task-3", title: "Третья задача" }],
+      title: "база",
+      position: 2,
+      tasks: [{ id: "task-3", title: "Третья задача", position: 2 }],
     },
     {
       id: "in-progress",
-      title: "In Progress",
-      tasks: [{ id: "task-2", title: "Вторая задача" }],
+      title: "не рядом",
+      position: 3,
+      tasks: [{ id: "task-2", title: "Вторая задача", position: 3 }],
     },
   ]);
+
   const [activeTask, setActiveTask] = useState<any>(null);
   const [activeColumn, setActiveColumn] = useState<any>(null);
 
+
+  useEffect(() => {
+  
+    fetchData(`/columns_with_tasks/${TEST_DATA__SPACE_ID}/${TEST_DATA__BOARD_ID}`).then(data => setColumns(data));
+
+  }, []);
+  
   useEffect(() => {
     const handleWheel = (event: WheelEvent) => {
       if (scrollRef.current) {
@@ -74,6 +92,7 @@ function App() {
     const newColumn: Column = {
       id: `col-${columns.length + 1}`, // Уникальный ID
       title: `New Column ${columns.length + 1}`,
+      position: columns[columns.length - 1].position + 1,
       tasks: [],
     };
     setColumns([...columns, newColumn]);
@@ -94,18 +113,36 @@ function App() {
     // Перетаскивание колонок
     if (active.data.current?.type === "column") {
       const oldIndex = columns.findIndex((col) => col.id === active.id);
+      const oldIndexReal = columns[oldIndex].id;
       const newIndex = columns.findIndex((col) => col.id === over.id);
-
-      console.log("Old index:", oldIndex, "New index:", newIndex);
-
-      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-        const newColumns = arrayMove(columns, oldIndex, newIndex);
-        setColumns(newColumns);
-        console.log("Columns reordered:", newColumns);
-      } else {
+    
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
         console.log("No reorder needed or invalid indices");
+        return;
       }
+    
+      let updatedColumns = arrayMove(columns, oldIndex, newIndex);
+      
+      // Пересчёт позиции у всех колонок
+      updatedColumns = updatedColumns.map((col, index) => ({
+        ...col,
+        position: index + 1, // Устанавливаем корректные позиции
+      }));
+    
+      setColumns(updatedColumns);
+    
+      // Находим новую позицию для текущей колонки
+      const newPos = updatedColumns.find(col => col.id === active.id)?.position;
+    
+      console.log("Old DND index:", oldIndex, "Old pos:", columns[oldIndex].position, "NewPos:", newPos, "New DND index:", newIndex);
+      
+      fetchData(`/columnMove?ColumnId=${columns[oldIndex].id.slice(0,-1)}&OldPosition=${columns[oldIndex].position}&NewPosition=${newPos}&SpaceId=${TEST_DATA__SPACE_ID}&BoardId=${TEST_DATA__BOARD_ID}`)
+        .then(response => console.log(response));
+    
+      console.log("Columns reordered:", updatedColumns);
     }
+    
+    
     // Перетаскивание задач
     else if (active.data.current?.type === "task") {
       const activeColumnId = active.data.current?.columnId;
@@ -180,20 +217,12 @@ function App() {
           <h1>logo</h1>
         </div>
         <div className="topbar-content">
-          table nameeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+          table
         </div>
       </div>
 
       <div className="flex-column">
-        <div className="sidebar">
-
-          <h4>TASK LIST</h4>
-
-          <button >
-            <p>Тут чисто случайно может оказатся очень много текста</p>
-          </button>
-
-        </div>
+        <Sidebar />
         <div className="app">
 
         <div className="scroll-wrapper" ref={scrollRef}>
@@ -228,7 +257,7 @@ function App() {
               ) : null}
             </DragOverlay>
           </DndContext>
-          <div className="AddButton" onClick={handleAddColumn}>TEST ADD</div>
+          <button type="button" className="app_addButton hover_darkgray" onClick={handleAddColumn}>+</button>
         </div>
       </div>
 
