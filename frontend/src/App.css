@@ -2,6 +2,8 @@
 :root {
   --sidebar-width: 17rem;
   --topbar-height: 6rem;
+
+  --user-img-size: 3rem
 }
 
 * {
@@ -60,11 +62,6 @@ html, body {
   overflow: hidden; 
 }
 
-.sidebar {
-  width: var(--sidebar-width);
-  background-color: green;
-  flex-shrink: 0;
-}
 
 .app {
   flex: 1;
@@ -72,6 +69,17 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.app_addButton {
+  font-size: 3rem;
+  text-align: center;
+  height: 4rem;
+  width: 4rem;
+}
+
+.hover_darkgray:hover {
+  background-color: darkgray;
 }
 
 .scroll-wrapper {
@@ -99,4 +107,58 @@ html, body {
   flex-direction: column;
   gap: 0.5rem;
   min-width: 10%;
+}
+
+.user-container {
+  display: flex;
+  flex-direction: row;
+
+  margin-top: 1rem;
+  margin-left: 0.3rem;
+  margin-right: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.user-img {
+
+  width: var(--user-img-size);
+  height: var(--user-img-size);
+  background-color: rosybrown;
+
+}
+
+
+.user-data-container {
+
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  
+  margin-left: 0.3rem;
+
+}
+
+.user-data {
+  font-size: 1.5rem;
+}
+
+
+.user-status {
+
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: rgb(146, 146, 146);
+  flex-shrink: 0;
+}
+
+.sidebar-buttons {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-button {
+  height: 2.3rem;
+  margin: 0.3rem 0.3rem 0 0.3rem
 }
