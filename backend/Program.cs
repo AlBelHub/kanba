@@ -213,6 +213,24 @@ public class Program
             return Results.Ok(boards);
         });
 
+        app.MapPost("/boards", async ([FromBody] BoardsProps props, IDbConnection db) =>
+        {
+            var query = @"
+                    INSERT INTO Boards (name, space_id, owner_id) VALUES (@name,@space_id,@owner_id)
+                    RETURNING id, name, space_id, owner_id";
+            
+            var newBoard = await db.QueryFirstOrDefaultAsync(query, props);
+            
+            if (newBoard != null)
+            {
+                return Results.Ok(newBoard);
+            }
+            else
+            {
+                return Results.BadRequest("Что-то пошло не так при создании колонки");
+            }
+        });
+        
         app.MapGet("/columns/{board_id}", [Authorize] async (int board_id, IDbConnection db) =>
         {
             var columns = 
@@ -221,6 +239,27 @@ public class Program
             return Results.Ok(columns);
         });
 
+        //TODO: ГЕНЕРИРОВАТЬ НОРМАЛЬНЫЙ ID
+        app.MapPost("/columns", async ([FromBody] ColumnsProps props , IDbConnection db) =>
+        {
+            
+            var query = @"
+                    INSERT INTO Columns (board_id, title, created_by, position) VALUES (@BoardId, @Title,@CreatedBy, @Position)
+                    RETURNING id, board_id, title, created_by, position";
+            
+            var newColumn = await db.QueryFirstOrDefaultAsync(query, props);
+            
+            if (newColumn != null)
+            {
+                return Results.Ok(newColumn);
+            }
+            else
+            {
+                return Results.BadRequest("Что-то пошло не так при создании колонки");
+            }
+        });
+
+        ///POST
         /// /columnMove?ColumnId=1&OldPosition=2&NewPosition=3&SpaceId=1&BoardId=1
         app.MapGet("/columnMove", async (int ColumnId, int OldPosition, int NewPosition, int SpaceId, int BoardId, IDbConnection db) =>
         {
@@ -284,6 +323,40 @@ public class Program
             return Results.Ok(tasks);
         });
 
+        app.MapPost("/tasks", async ([FromBody] TaskProps props,IDbConnection db) =>
+        {
+            var sql = @"
+                INSERT INTO Tasks (
+                    column_id, 
+                    board_id, 
+                    title, 
+                    description, 
+                    status, 
+                    position,
+                    created_by
+                ) VALUES (
+                    @column_id,
+                    @board_id,
+                    @title, 
+                    @description, 
+                    @status, 
+                    @position,
+                    @created_by 
+                    ) 
+                RETURNING column_id,board_id,title,description,status,position,created_by";
+            
+            var newTask = await db.QueryFirstOrDefaultAsync(sql, props);
+
+            if (newTask != null)
+            {
+                return Results.Ok(newTask);
+            }
+            else
+            {
+                return Results.BadRequest("Что-то пошло не так");
+            }
+        });
+        
         app.MapGet("/columns_with_tasks/{spaceId}/{boardId}", async (int spaceId, int boardId, IDbConnection db) =>
         {
             var sql = @"
@@ -552,6 +625,32 @@ public class Program
         public List<TaskItem> Tasks { get; set; }
     }
 
+    public class ColumnsProps
+    {
+        public int CreatedBy { get; set; }
+        public string Title { get; set; }
+        public int BoardId { get; set; }
+        public int Position { get; set; }
+    }
+
+    public class BoardsProps
+    {
+        public string name { get; set; }
+        public int space_id { get; set; }
+        public int owner_id { get; set; }
+    }
+
+    public class TaskProps
+    {
+        public int column_id { get; set; }
+        public int board_id { get; set; }
+        public string title { get; set; }
+        public string description { get; set; }
+        public string status { get; set; }
+        public int position { get; set; }
+        public int created_by { get; set; }
+    }
+    
     public class TaskItem
     {
         public string Id { get; set; }
