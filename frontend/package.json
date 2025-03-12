@@ -14,6 +14,7 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "98.css": "^0.1.20",
+    "motion": "^12.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "xp.css": "^0.2.6"
