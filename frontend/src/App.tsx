@@ -12,7 +12,8 @@ import "./App.css";
 import Columns from "./Components/Columns";
 import TaskItem from "./Components/TaskItem";
 import Sidebar from "./Sidebar";
-import fetchData from "./Utils/Api";
+import fetchData, { createColumn } from "./Utils/Api";
+import FloatingWindow from "./Components/FloatingWindow";
 
 function App() {
 
@@ -44,7 +45,6 @@ function App() {
 
   const [activeTask, setActiveTask] = useState<any>(null);
   const [activeColumn, setActiveColumn] = useState<any>(null);
-
 
   useEffect(() => {
   
@@ -88,13 +88,11 @@ function App() {
       setActiveTask(null);
     }
   };
-  const handleAddColumn = () => {
-    const newColumn: Column = {
-      id: `col-${columns.length + 1}`, // Уникальный ID
-      title: `New Column ${columns.length + 1}`,
-      position: columns[columns.length - 1].position + 1,
-      tasks: [],
-    };
+  const handleAddColumn = async () => {
+    const highestPos = Math.max(...columns.map(item => item.position)) + 1;
+    const newColumn = await createColumn( { boardId: TEST_DATA__BOARD_ID,title: "created from button + back",createdBy: 1,position: highestPos });
+    newColumn.tasks = [];
+
     setColumns([...columns, newColumn]);
   };
   const handleDragEnd = (event: DragEndEvent) => {
@@ -136,7 +134,7 @@ function App() {
     
       console.log("Old DND index:", oldIndex, "Old pos:", columns[oldIndex].position, "NewPos:", newPos, "New DND index:", newIndex);
       
-      fetchData(`/columnMove?ColumnId=${columns[oldIndex].id.slice(0,-1)}&OldPosition=${columns[oldIndex].position}&NewPosition=${newPos}&SpaceId=${TEST_DATA__SPACE_ID}&BoardId=${TEST_DATA__BOARD_ID}`)
+      fetchData(`/columnMove?ColumnId=${parseInt(columns[oldIndex].id)}&OldPosition=${columns[oldIndex].position}&NewPosition=${newPos}&SpaceId=${TEST_DATA__SPACE_ID}&BoardId=${TEST_DATA__BOARD_ID}`)
         .then(response => console.log(response));
     
       console.log("Columns reordered:", updatedColumns);
@@ -158,6 +156,9 @@ function App() {
       const activeColumn = columns.find((col) => col.id === activeColumnId);
       const overColumn = columns.find((col) => col.id === overColumnId);
 
+      const activeColPos = active.data.current.sortable.index + 1;
+      console.log("Active colpos:", activeColPos)
+
       if (!activeColumn || !overColumn) {
         console.log("Columns not found");
         setActiveTask(null);
@@ -170,6 +171,12 @@ function App() {
       );
       const overTaskIndex = over.data.current?.taskIndex;
 
+      // Task old pos and new pos
+      console.log("Task ID", active.id ,"Task Index Before: ", activeTaskIndex+1, "Column:", activeColumnId)
+      console.log("Task ID", active.id, !overTaskIndex ? 1 : overTaskIndex+1 , "Column:", overColumnId)
+
+      //Задача перемещена в той же колонке
+      
       if (activeColumnId === overColumnId) {
         if (overTaskIndex !== undefined && activeTaskIndex !== overTaskIndex) {
           const reorderedTasks = arrayMove(
@@ -177,12 +184,19 @@ function App() {
             activeTaskIndex,
             overTaskIndex
           );
+
+          fetchData(`/taskMove?OldColumnId=${parseInt(activeColumnId)}&NewColumnId=${parseInt(overColumnId)}&TaskOldPos=${activeTaskIndex+1}&TaskNewPos=${!overTaskIndex ? 1 : overTaskIndex+1}&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(active.id.toString())}`,)
+      .then(response => console.log(response));
+
           setColumns(
             columns.map((col) =>
               col.id === activeColumnId ? { ...col, tasks: reorderedTasks } : col
             )
           );
         }
+
+        //Задача перемещена в другой колонке
+      
       } else {
         const task = activeColumn.tasks[activeTaskIndex];
         const updatedActiveTasks = activeColumn.tasks.filter(
@@ -190,6 +204,9 @@ function App() {
         );
         const updatedOverTasks = [...overColumn.tasks];
         updatedOverTasks.splice(overTaskIndex || 0, 0, task);
+
+        fetchData(`/taskMove?OldColumnId=${parseInt(activeColumnId)}&NewColumnId=${parseInt(overColumnId)}&TaskOldPos=${activeTaskIndex+1}&TaskNewPos=${!overTaskIndex ? 1 : overTaskIndex+1}&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(active.id.toString())}`,)
+      .then(response => console.log(response));
 
         setColumns(
           columns.map((col) => {
@@ -263,11 +280,14 @@ function App() {
 
         </div>
       </div>
+
+
     
     
     </div>
     
 
+      <FloatingWindow />
 
     
               </>

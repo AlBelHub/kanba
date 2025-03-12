@@ -5,6 +5,7 @@ import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { Column, Task } from "../Types/types";
 import { CSS } from "@dnd-kit/utilities";
 import TaskItem from "./TaskItem";
+import { createTask } from "../Utils/Api";
 
 interface ColumnProps {
   colId: string;
@@ -41,16 +42,28 @@ export default function Columns({ colId, colName, tasks, setColumns }: ColumnPro
     minHeight: "100rem", //Не должно так быть! 
   };
 
-  const handleAddTask = () => {
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      title: 'Создано с кнопки!',
+  //TODO: получать с бека только id
+  const handleAddTask = async () => {
+    try {
+      const newTask = await createTask({
+        board_id: 1, 
+        column_id: parseInt(colId),
+        title: "New Task", // заменить на пользовательский ввод
+        description: "Task description",
+        status: "open",
+        position: !tasks || tasks.length === 0 ? 1 : Math.max(...tasks.map(task => task.position), 0) + 1,
+        created_by: 1,
+      });
+  
+      setColumns((prev) =>
+        prev.map((col) =>
+          col.id === colId ? { ...col, tasks: [...col.tasks, newTask] } : col
+        )
+      );
+    } catch (error) {
+      console.error("Ошибка при создании задачи:", error);
     }
-    
-    setColumns((prev) => (
-      prev.map((col) => col.id === colId ? { ...col,tasks: [...col.tasks, newTask] } : col )
-    ))
-  }
+  };
 
   return (
     <div 

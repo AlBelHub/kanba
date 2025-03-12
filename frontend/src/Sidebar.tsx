@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import fetchData from './Utils/Api';
+import fetchData, { createBoard } from './Utils/Api';
 import { Board } from './Types/types';
 
 export default function Sidebar() {
@@ -42,7 +42,11 @@ export default function Sidebar() {
     
       }, []);
     
-    
+      const handleAddBoard = async () => {
+        const newBoard : Board = await createBoard({name: "Yay! New board!", owner_id: 1, space_id: 1})
+        setBoards([...boards, newBoard]);
+      }
+
     return(
         <div className="sidebar">
         
@@ -61,7 +65,7 @@ export default function Sidebar() {
 
 
             <div className="sidebar-buttons">
-              <button type="button" className='sidebar-button hover_darkgray'>Добавить доску</button>
+              <button type="button" className='sidebar-button hover_darkgray' onClick={handleAddBoard}>Добавить доску</button>
             
                 {
                     boards.map(board => (
