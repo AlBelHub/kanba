@@ -343,7 +343,7 @@ public class Program
                     @position,
                     @created_by 
                     ) 
-                RETURNING column_id,board_id,title,description,status,position,created_by";
+                RETURNING id::TEXT || 't' AS id ,column_id,board_id,title,description,status,position,created_by";
             
             var newTask = await db.QueryFirstOrDefaultAsync(sql, props);
 
@@ -356,7 +356,74 @@ public class Program
                 return Results.BadRequest("Что-то пошло не так");
             }
         });
+
         
+                //TODD: POST and BODY
+        app.MapGet("/taskMove", async (int OldColumnId, int NewColumnId, int TaskOldPos, int TaskNewPos, int BoardId, int TaskId, IDbConnection db) =>
+        {
+            if (db.State != ConnectionState.Open)
+            {
+                db.Open();
+            }
+
+            using var transaction = db.BeginTransaction();
+            try
+            {
+                if (OldColumnId == NewColumnId)
+                {
+                    // Если перемещаем внутри одной колонки
+                    if (TaskOldPos < TaskNewPos)
+                    {
+                        // Двигаем вверх (уменьшаем номера)
+                        await db.ExecuteAsync(
+                            "UPDATE tasks SET position = position - 1 WHERE column_id = @ColumnId AND position > @TaskOldPos AND position <= @TaskNewPos",
+                            new { ColumnId = OldColumnId, TaskOldPos, TaskNewPos }, transaction);
+                    }
+                    else
+                    {
+                        // Двигаем вниз (увеличиваем номера)
+                        await db.ExecuteAsync(
+                            "UPDATE tasks SET position = position + 1 WHERE column_id = @ColumnId AND position >= @TaskNewPos AND position < @TaskOldPos",
+                            new { ColumnId = OldColumnId, TaskOldPos, TaskNewPos }, transaction);
+                    }
+
+                    // Обновляем позицию задачи
+                    await db.ExecuteAsync(
+                        "UPDATE tasks SET position = @TaskNewPos WHERE id = @TaskId",
+                        new { TaskNewPos, TaskId }, transaction);
+                }
+                else
+                {
+                    // Освобождаем позицию в старой колонке
+                    await db.ExecuteAsync(
+                        "UPDATE tasks SET position = position - 1 WHERE column_id = @OldColumnId AND position > @TaskOldPos",
+                        new { OldColumnId, TaskOldPos }, transaction);
+
+                    // Вставляем задачу в новую колонку
+                    await db.ExecuteAsync(
+                        "UPDATE tasks SET column_id = @NewColumnId, position = @TaskNewPos WHERE id = @TaskId",
+                        new { NewColumnId, TaskNewPos, TaskId }, transaction);
+
+                    // Сдвигаем задачи вниз в новой колонке
+                    await db.ExecuteAsync(
+                        "UPDATE tasks SET position = position + 1 WHERE column_id = @NewColumnId AND position >= @TaskNewPos AND id <> @TaskId",
+                        new { NewColumnId, TaskNewPos, TaskId }, transaction);
+                }
+
+                transaction.Commit();
+                return Results.Ok(new { message = "Task moved successfully" });
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                    //!!!!!
+                return Results.Problem(ex.Message);
+            }
+        });
+
+
+
+//TODD: POST and BODY
         app.MapGet("/columns_with_tasks/{spaceId}/{boardId}", async (int spaceId, int boardId, IDbConnection db) =>
         {
             var sql = @"
