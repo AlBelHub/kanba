@@ -76,7 +76,6 @@ export async function createBoard(props: BoardsBodyProps) {
   }
 }
 
-//TODO: dodelat!
 export async function createTask(props: TaskBodyProps) {
   const url = "/tasks"; // URL для создания задачи
   const options: RequestInit = {

@@ -12,9 +12,10 @@ interface ColumnProps {
   colName: string;
   tasks: Task[];
   setColumns: React.Dispatch<React.SetStateAction<Column[]>>;
+  onTaskClick: any
 }
 
-export default function Columns({ colId, colName, tasks, setColumns }: ColumnProps) {
+export default function Columns({ colId, colName, tasks, setColumns, onTaskClick }: ColumnProps) {
   const {
     attributes,
     listeners,
@@ -90,10 +91,13 @@ export default function Columns({ colId, colName, tasks, setColumns }: ColumnPro
                 task={task}
                 columnId={colId}
                 taskIndex={taskIndex}
+                onTaskClick={onTaskClick}
               />
             ))}
           </SortableContext>
-          <button className="testTaskAdd hover_darkgray" onClick={handleAddTask}>Добавить задачу!</button>
+
+          <button className="testTaskAdd hover_darkgray" onClick={handleAddTask} >Добавить задачу!</button>
+        
         </div>
       </div>
     </div>
