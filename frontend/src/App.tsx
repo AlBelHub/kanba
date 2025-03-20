@@ -26,13 +26,11 @@ function App() {
   const [topWindow, setTopWindow] = useState<string | null>(null);
 
   const handleTaskClick = (task: any, columnId: string) => {
-    console.log("Новое оконце:", task.id);
 
     setOpenWindows((prev) => [...prev, { task, columnId }]);
   };
 
   const handleCloseWindow = (taskId: string) => {
-    console.log("Handle close window");
     setOpenWindows((prev) => prev.filter((win) => win.task.id !== taskId));
   };
 
@@ -107,14 +105,10 @@ function App() {
     const { active, over } = event;
 
     if (!over) {
-      console.log("No over target");
       setActiveTask(null);
       setActiveColumn(null);
       return;
     }
-
-    console.log("Active:", active.id, active.data.current?.type);
-    console.log("Over:", over.id, over.data.current?.type);
 
     // Перетаскивание колонок
     if (active.data.current?.type === "column") {
@@ -123,7 +117,6 @@ function App() {
       const newIndex = columns.findIndex((col) => col.id === over.id);
 
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
-        console.log("No reorder needed or invalid indices");
         return;
       }
 
@@ -142,24 +135,12 @@ function App() {
         (col) => col.id === active.id
       )?.position;
 
-      console.log(
-        "Old DND index:",
-        oldIndex,
-        "Old pos:",
-        columns[oldIndex].position,
-        "NewPos:",
-        newPos,
-        "New DND index:",
-        newIndex
-      );
-
       fetchData(
         `/columnMove?ColumnId=${parseInt(columns[oldIndex].id)}&OldPosition=${
           columns[oldIndex].position
         }&NewPosition=${newPos}&SpaceId=${TEST_DATA__SPACE_ID}&BoardId=${TEST_DATA__BOARD_ID}`
-      ).then((response) => console.log(response));
+      );
 
-      console.log("Columns reordered:", updatedColumns);
     }
 
     // Перетаскивание задач
@@ -168,7 +149,6 @@ function App() {
       const overColumnId = over.data.current?.columnId;
 
       if (!activeColumnId || !overColumnId) {
-        console.log("Missing column IDs");
         setActiveTask(null);
         setActiveColumn(null);
         return;
@@ -178,10 +158,8 @@ function App() {
       const overColumn = columns.find((col) => col.id === overColumnId);
 
       const activeColPos = active.data.current.sortable.index + 1;
-      console.log("Active colpos:", activeColPos);
 
       if (!activeColumn || !overColumn) {
-        console.log("Columns not found");
         setActiveTask(null);
         setActiveColumn(null);
         return;
@@ -192,25 +170,7 @@ function App() {
       );
       const overTaskIndex = over.data.current?.taskIndex;
 
-      // Task old pos and new pos
-      console.log(
-        "Task ID",
-        active.id,
-        "Task Index Before: ",
-        activeTaskIndex + 1,
-        "Column:",
-        activeColumnId
-      );
-      console.log(
-        "Task ID",
-        active.id,
-        !overTaskIndex ? 1 : overTaskIndex + 1,
-        "Column:",
-        overColumnId
-      );
-
       //Задача перемещена в той же колонке
-
       if (activeColumnId === overColumnId) {
         if (overTaskIndex !== undefined && activeTaskIndex !== overTaskIndex) {
           const reorderedTasks = arrayMove(
@@ -229,7 +189,7 @@ function App() {
             }&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(
               active.id.toString()
             )}`
-          ).then((response) => console.log(response));
+          );
 
           setColumns(
             columns.map((col) =>
@@ -259,7 +219,7 @@ function App() {
           }&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(
             active.id.toString()
           )}`
-        ).then((response) => console.log(response));
+        );
 
         setColumns(
           columns.map((col) => {
