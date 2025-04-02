@@ -3,16 +3,19 @@ using backend.Helpers;
 using backend.Models;
 using backend.Repositories.Abstract;
 using backend.Repositories.Interfaces;
+using Dapper;
 
 namespace backend.Repositories;
 
 public class UserRepository : RepositoryBase, IUserRepository
 {
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IUUIDProvider _uuidProvider;
 
-    public UserRepository(IDbConnection db, IPasswordHasher pwdHash) : base(db)
+    public UserRepository(IDbConnection db, IPasswordHasher pwdHash, IUUIDProvider uuidProvider) : base(db)
     {
         _passwordHasher = pwdHash;
+        _uuidProvider = uuidProvider;
     }
 
     public async Task<string> GetPasswordHashAsync(string username)
@@ -32,17 +35,20 @@ public class UserRepository : RepositoryBase, IUserRepository
         return await ExecuteScalarAsync<bool>(sql, new {username = username});
     }
     
-    public async Task<bool> RegisterUserAsync(string username, string password)
+    public async Task<User> RegisterUserAsync(string username, string password)
     {
         if (await UserExistsAsync(username))
         {
-            return false;
+            return null;
         }
         
         var passwordHash = _passwordHasher.HashPassword(password);
-
-        string sql = "INSERT INTO users (username, password) VALUES (@username, @passwordHash)";
-        return await ExecuteScalarAsync<bool>(sql, new {username = username, passwordHash = passwordHash});
+        var id = _uuidProvider.GenerateUUIDv7();
+        
+        string sql = @"INSERT INTO users (id, username, password) 
+                        VALUES (@id, @username, @password)
+                        RETURNING *";
+        return await _db.QueryFirstOrDefaultAsync<User>(sql, new {id = id,username = username, password = passwordHash});
     }
     
     

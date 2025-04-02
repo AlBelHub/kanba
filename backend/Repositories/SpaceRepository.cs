@@ -1,4 +1,5 @@
 using System.Data;
+using backend.Helpers;
 using backend.Models;
 using backend.Repositories.Abstract;
 using backend.Repositories.Interfaces;
@@ -8,12 +9,18 @@ namespace backend.Repositories;
 
 public class SpaceRepository : RepositoryBase, ISpaceRepository
 {
-    public SpaceRepository(IDbConnection db) : base(db) { }
-
-    public async Task<Space> CreateSpace(string userId, string spaceName)
+    private readonly IUUIDProvider _uuidProvider;
+    public SpaceRepository(IDbConnection db, IUUIDProvider uuidProvider) : base(db)
     {
-        string sql = "INSERT INTO spaces (name, userId) VALUES (@spaceName, @userId) RETURNING *";
-        return await _db.QueryFirstOrDefaultAsync<Space>(sql, new { userId, spaceName });
+        _uuidProvider = uuidProvider;
+    }
+
+    public async Task<Space> CreateSpace(Guid userId, string spaceName)
+    {
+        var id = _uuidProvider.GenerateUUIDv7();
+        
+        string sql = "INSERT INTO spaces (id, name, user_id) VALUES (@id, @spaceName, @userId) RETURNING *";
+        return await _db.QueryFirstOrDefaultAsync<Space>(sql, new { id, userId, spaceName });
     }
 
     public Task<Space?> GetSpace(string spaceId)
@@ -24,7 +31,7 @@ public class SpaceRepository : RepositoryBase, ISpaceRepository
 
     public async Task<IEnumerable<Space>> GetSpacesByUser(string userId)
     {
-        string sql = "SELECT * FROM spaces WHERE userId = @userId";
+        string sql = "SELECT * FROM spaces WHERE user_id = @userId";
         return await _db.QueryAsync<Space>(sql, new {userId});
     }
 

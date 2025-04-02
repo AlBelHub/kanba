@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using backend.Helpers;
 using backend.Models;
 using backend.Repositories;
 using backend.Repositories.Interfaces;
@@ -76,17 +77,20 @@ public class Program
         });
 
 
-        builder.Services.AddScoped<IDbConnection>(_ =>
+        builder.Services.AddTransient<IDbConnection>(_ =>
         {
             var connectionString = builder.Configuration.GetConnectionString("Postgres")
                                    ?? throw new InvalidOperationException("Postgres connection string is missing.");
             return new NpgsqlConnection(connectionString);
         });
         
-        builder.Services.AddScoped<IUserRepository, UserRepository>();
-        builder.Services.AddScoped<ISpaceRepository, SpaceRepository>();
-        builder.Services.AddScoped<IBoardRepository, BoardRepository>();
-        builder.Services.AddScoped<IColumnRepository, ColumnRepository>();
+        builder.Services.AddTransient<IUserRepository, UserRepository>();
+        builder.Services.AddTransient<ISpaceRepository, SpaceRepository>();
+        builder.Services.AddTransient<IBoardRepository, BoardRepository>();
+        builder.Services.AddTransient<IColumnRepository, ColumnRepository>();
+        builder.Services.AddTransient<ITaskRepository, TaskRepository>();
+        builder.Services.AddTransient<IPasswordHasher, PasswordHasher>();
+        builder.Services.AddTransient<IUUIDProvider, UUIDProvider>();
 
         
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -173,9 +177,9 @@ public class Program
                     return Results.BadRequest("User already exists.");
                 }
 
-                bool result = await UserRepository.RegisterUserAsync(newUser.username, newUser.password);
+                var user = await UserRepository.RegisterUserAsync(newUser.username, newUser.password);
 
-                if (!result)
+                if (user == null)
                 {
                     return Results.BadRequest("Something went wrong.");
                 }
@@ -454,16 +458,14 @@ public class Program
                 .OrderBy(g => g.Key.ColumnPosition)
                 .Select(g => new Column
                 {
-                    Id = g.Key.ColumnId.ToString() +
-                         "c", //Без добавления типа начнутся коллизии между колонками и тасками
+                    Id = g.Key.ColumnId,
                     Title = g.Key.ColumnTitle,
                     Position = g.Key.ColumnPosition,
-                    Tasks = g.Where(t => t.TaskId.HasValue)
+                    Tasks = g.Where(t => t.TaskId != null)
                         .OrderBy(t => t.TaskPosition)
                         .Select(t => new TaskItem
                         {
-                            Id = t.TaskId?.ToString() +
-                                 "t", //Без добавления типа начнутся коллизии между колонками и тасками
+                            Id = t.TaskId,
                             Position = t.TaskPosition,
                             Title = t.TaskTitle
                         }).ToList()
@@ -477,7 +479,8 @@ public class Program
                     app.Services.GetRequiredService<IUserRepository>(), 
                     app.Services.GetRequiredService<ISpaceRepository>(),
                     app.Services.GetRequiredService<IBoardRepository>(),
-                    app.Services.GetRequiredService<IColumnRepository>());
+                    app.Services.GetRequiredService<IColumnRepository>(),
+                    app.Services.GetRequiredService<ITaskRepository>());
 
         app.Run();
 
@@ -502,17 +505,18 @@ public class Program
 
         }
 
-        void EnsureDatabaseCreated(
+        async void EnsureDatabaseCreated(
             IDbConnection db, 
             IUserRepository userRepository, 
             ISpaceRepository spaceRepository,
             IBoardRepository boardRepository,
-            IColumnRepository columnRepository)
+            IColumnRepository columnRepository,
+            ITaskRepository taskRepository)
         {
             // Создание таблицы пользователей
             string createUsers = @"
             CREATE TABLE IF NOT EXISTS Users (
-               id serial primary key,
+               id UUID primary key,
                username varchar(40) not null,
                password varchar(255) not null
             );";
@@ -522,9 +526,9 @@ public class Program
             //Таблица для пространств (spaces) — личное рабочее пространство пользователя
             string createSpaces = @"
             CREATE TABLE IF NOT EXISTS Spaces (
-               id serial primary key,
+               id UUID primary key,
                name varchar(50) not null,
-               user_id int REFERENCES Users(id) ON DELETE CASCADE,
+               user_id UUID REFERENCES Users(id) ON DELETE CASCADE,
                created_at timestamp default current_timestamp
             );";
             db.Execute(createSpaces);
@@ -532,10 +536,10 @@ public class Program
             // Таблица для досок (boards) внутри пространства
             string createBoards = @"
             CREATE TABLE IF NOT EXISTS Boards (
-               id serial primary key,
+               id UUID primary key,
                name varchar(50) not null,
-               space_id int REFERENCES Spaces(id) ON DELETE CASCADE,
-               owner_id int REFERENCES Users(id) ON DELETE CASCADE,
+               space_id UUID REFERENCES Spaces(id) ON DELETE CASCADE,
+               owner_id UUID REFERENCES Users(id) ON DELETE CASCADE,
                created_at timestamp default current_timestamp
             );";
             db.Execute(createBoards);
@@ -543,26 +547,26 @@ public class Program
             // Таблица для колонок внутри доски
             string createColumns = @"
             CREATE TABLE IF NOT EXISTS Columns (
-               id serial primary key,
-               board_id int REFERENCES Boards(id) ON DELETE CASCADE,
+               id UUID primary key,
+               board_id UUID REFERENCES Boards(id) ON DELETE CASCADE,
                title varchar(50) not null,
                position int not null,
-               created_by int REFERENCES Users(id) ON DELETE SET NULL,
+               created_by UUID REFERENCES Users(id) ON DELETE SET NULL,
                created_at timestamp default current_timestamp
             );";
             db.Execute(createColumns);
 
             string createTasks = @"
                     CREATE TABLE IF NOT EXISTS Tasks (
-                       id serial primary key,
-                       column_id int REFERENCES Columns(id) ON DELETE CASCADE,
-                       board_id int REFERENCES Boards(id) ON DELETE CASCADE, -- Новое поле
+                       id UUID primary key,
+                       column_id UUID REFERENCES Columns(id) ON DELETE CASCADE,
+                       board_id UUID REFERENCES Boards(id) ON DELETE CASCADE, -- Новое поле
                        title varchar(100) not null,
                        description text,
                        status varchar(20) not null check (status in ('open', 'in progress', 'done')),
                        position int not null,
-                       created_by int REFERENCES Users(id) ON DELETE SET NULL,
-                       assigned_to int REFERENCES Users(id) ON DELETE SET NULL,
+                       created_by UUID REFERENCES Users(id) ON DELETE SET NULL,
+                       assigned_to UUID REFERENCES Users(id) ON DELETE SET NULL,
                        created_at timestamp default current_timestamp,
                        updated_at timestamp default current_timestamp
                     );";
@@ -571,9 +575,9 @@ public class Program
             // Таблица логов для отслеживания изменений в задачах
             string createTaskLogs = @"
             CREATE TABLE IF NOT EXISTS TaskLogs (
-               id serial primary key,
-               task_id int REFERENCES Tasks(id) ON DELETE CASCADE,
-               user_id int REFERENCES Users(id) ON DELETE SET NULL,
+               id UUID primary key,
+               task_id UUID REFERENCES Tasks(id) ON DELETE CASCADE,
+               user_id UUID REFERENCES Users(id) ON DELETE SET NULL,
                action varchar(50) not null,
                old_value text,
                new_value text,
@@ -588,93 +592,83 @@ public class Program
             if (userCount == 0)
             {
                 // Создаём пользователя
-                // db.Execute("INSERT INTO Users (username, password) VALUES (@Username, @Password)",
-                //            new { Username = "default", Password = HashPassword("default", GenerateSalt()) });
-                userRepository.RegisterUserAsync("default", "default");
-                Console.WriteLine("Inserted default user");
+                var user = await userRepository.RegisterUserAsync("default", "default");
 
+                if (user == null)
+                {
+                    Console.WriteLine("User not registered");
+                }
+                
+                Console.WriteLine("Inserted default user " + user.id + " " + user.username);
+                
                 // Допустим, после вставки пользователя его id равен 1.
                 // Создаём пространство для пользователя
                 // db.Execute("INSERT INTO Spaces (name, user_id) VALUES (@Name, @UserId)",
                 //     new { Name = "My Space", UserId = 1 });
 
-                spaceRepository.CreateSpace("1", "default");
-                Console.WriteLine("Inserted default space");
+                var space = await spaceRepository.CreateSpace(user.id, "default");
+
+                if (space == null)
+                {
+                    Console.WriteLine("Space not created");
+                }
+                
+                Console.WriteLine("Inserted default space " + space.Name + " " + space.Id );
 
                 // Создаём доску внутри пространства (space_id = 1) с owner_id пользователя 1
                 Board[] boards = new[]
                 {
-                    new Board { Name = "Web Development", SpaceId = 1, OwnerId = 1 },
-                    new Board { Name = "Mobile App", SpaceId = 1, OwnerId = 1 },
-                    new Board { Name = "Marketing Campaign", SpaceId = 1, OwnerId = 1 },
-                    new Board { Name = "UX/UI Design", SpaceId = 1, OwnerId = 1 }
+                    new Board { Name = "Web Development", SpaceId = space.Id, OwnerId = user.id },
+                    new Board { Name = "Mobile App", SpaceId = space.Id, OwnerId = user.id },
+                    new Board { Name = "Marketing Campaign", SpaceId = space.Id, OwnerId = user.id },
+                    new Board { Name = "UX/UI Design", SpaceId = space.Id, OwnerId = user.id }
                 };
                 
                 Random rand = new Random();
 
                 foreach (var board in boards)
                 {
-                    boardRepository.CreateBoard(new BoardsProps {Name = board.Name, SpaceId = board.SpaceId, OwnerId = board.OwnerId});
-                    Console.WriteLine($"Inserted board: {board.Name}");
+                    var createdBoard = await boardRepository.CreateBoard(new BoardsProps {Name = board.Name, SpaceId = board.SpaceId, OwnerId = board.OwnerId});
 
-                    // Получаем ID доски
-                    int boardId = db.ExecuteScalar<int>(
-                        "SELECT id FROM Boards WHERE name = @Name AND space_id = @SpaceId",
-                        new { board.Name, board.SpaceId });
-
+                    if (createdBoard == null)
+                    {
+                        Console.WriteLine("Board not created");
+                    }
+                    
+                    Console.WriteLine($"Inserted board: {board.Name}, {board.Id}");
+                    
                     int columnCount = rand.Next(3, 6); // От 3 до 5 колонок на борде
 
                     for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++)
                     {
-                        db.Execute(
-                            "INSERT INTO Columns (board_id, title, created_by, position) VALUES (@BoardId, @Title, @CreatedBy, @Position)",
-                            new
-                            {
-                                BoardId = boardId, Title = $"Column {columnIndex}", CreatedBy = 1,
-                                Position = columnIndex
-                            });
+                        // db.Execute(
+                        //     "INSERT INTO Columns (board_id, title, created_by, position) VALUES (@BoardId, @Title, @CreatedBy, @Position)",
+                        //     new
+                        //     {
+                        //         BoardId = createdBoard.Id, Title = $"Column {columnIndex}", CreatedBy = createdBoard.OwnerId,
+                        //         Position = columnIndex
+                        //     });
 
-                        // Получаем ID созданной колонки
-                        int columnId = db.ExecuteScalar<int>(
-                            "SELECT id FROM Columns WHERE board_id = @BoardId AND title = @Title",
-                            new { BoardId = boardId, Title = $"Column {columnIndex}" });
+                        var column = await columnRepository.CreateColumn(new ColumnsProps(){ CreatedBy = user.id, Position = columnIndex, BoardId = createdBoard.Id , Title = $"from for {columnIndex}"});
 
                         int taskCount = rand.Next(5, 11); // От 5 до 10 задач на колонку
 
                         for (int taskIndex = 1; taskIndex <= taskCount; taskIndex++)
                         {
-                            db.Execute(@"
-                                INSERT INTO Tasks (
-                                    column_id, 
-                                    board_id, 
-                                    title, 
-                                    description, 
-                                    status, 
-                                    position,
-                                    created_by, 
-                                    assigned_to
-                                ) VALUES (
-                                    @ColumnId,
-                                    @BoardId,
-                                    @Title, 
-                                    @Description, 
-                                    @Status, 
-                                    @Position,
-                                    @CreatedBy, 
-                                    @AssignedTo
-                                )", new
+                            taskRepository.CreateTask(new TaskProps()
                             {
-                                ColumnId = columnId,
-                                BoardId = boardId,
-                                Title = $"Task {taskIndex} in Column {columnIndex}",
-                                Description = "This is a sample task.",
-                                Status = "open",
-                                Position = taskIndex,
-                                CreatedBy = 1,
-                                AssignedTo = 1
-                            });
+                                
+                                column_id = column.Id,
+                                board_id= createdBoard.Id,
+                                title = $"Task {taskIndex} in Column {columnIndex}",
+                                description = "This is a sample task.",
+                                status = "open",
+                                position= taskIndex,
+                                created_by = user.id,
 
-                            Console.WriteLine($"Inserted task {taskIndex} in column {columnIndex} on board {boardId}");
+                            });                            
+
+                            Console.WriteLine($"Inserted task {taskIndex} in column {columnIndex} on board {createdBoard.Id}");
                         }
                     }
                 }

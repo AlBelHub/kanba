@@ -328,6 +328,19 @@
             "related": ".xml"
           }
         }
+      },
+      "UUID/1.1.1": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/UUID.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/UUID.dll": {
+            "related": ".xml"
+          }
+        }
       }
     }
   },
@@ -1078,6 +1091,34 @@
         "system.identitymodel.tokens.jwt.7.1.2.nupkg.sha512",
         "system.identitymodel.tokens.jwt.nuspec"
       ]
+    },
+    "UUID/1.1.1": {
+      "sha512": "K/eeCvoeofNIg2SKG04/XbrjBmAYfWEOAJ12XkwPx3dxBSAiUh5CeutPbFgiiRzyWPJqDb3m0DRrtntgIiP2wQ==",
+      "type": "package",
+      "path": "uuid/1.1.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE",
+        "README.MD",
+        "UUID.png",
+        "lib/net48/UUID.dll",
+        "lib/net48/UUID.xml",
+        "lib/net6.0/UUID.dll",
+        "lib/net6.0/UUID.xml",
+        "lib/net7.0/UUID.dll",
+        "lib/net7.0/UUID.xml",
+        "lib/net8.0/UUID.dll",
+        "lib/net8.0/UUID.xml",
+        "lib/net9.0/UUID.dll",
+        "lib/net9.0/UUID.xml",
+        "lib/netstandard2.0/UUID.dll",
+        "lib/netstandard2.0/UUID.xml",
+        "lib/netstandard2.1/UUID.dll",
+        "lib/netstandard2.1/UUID.xml",
+        "uuid.1.1.1.nupkg.sha512",
+        "uuid.nuspec"
+      ]
     }
   },
   "projectFileDependencyGroups": {
@@ -1088,7 +1129,8 @@
       "Microsoft.AspNetCore.OpenApi >= 8.0.10",
       "Newtonsoft.Json >= 13.0.3",
       "Npgsql >= 8.0.7",
-      "Swashbuckle.AspNetCore >= 6.6.2"
+      "Swashbuckle.AspNetCore >= 6.6.2",
+      "UUID >= 1.1.1"
     ]
   },
   "packageFolders": {
@@ -1156,6 +1198,10 @@
           "Swashbuckle.AspNetCore": {
             "target": "Package",
             "version": "[6.6.2, )"
+          },
+          "UUID": {
+            "target": "Package",
+            "version": "[1.1.1, )"
           }
         },
         "imports": [

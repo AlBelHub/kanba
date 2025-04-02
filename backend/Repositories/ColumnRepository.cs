@@ -1,19 +1,40 @@
 using System.Data;
+using backend.Helpers;
 using backend.Models;
 using backend.Repositories.Abstract;
 using backend.Repositories.Interfaces;
+using Dapper;
 
 namespace backend.Repositories;
 
 public class ColumnRepository : RepositoryBase, IColumnRepository
 {
-    public ColumnRepository(IDbConnection db) : base(db)
+    
+    private readonly IUUIDProvider _uuidProvider;
+    
+    public ColumnRepository(IDbConnection db, IUUIDProvider uuidProvider) : base(db)
     {
+        _uuidProvider = uuidProvider;
     }
 
     public async Task<Column> CreateColumn(ColumnsProps columnsProps)
     {
-        throw new NotImplementedException();
+
+        var id = _uuidProvider.GenerateUUIDv7();
+        
+        string sql = @"
+        INSERT INTO Columns (id, board_id, title, created_by, position) 
+        VALUES (@id, @BoardId, @Title, @CreatedBy, @Position)
+        RETURNING *";
+
+        return await _db.QueryFirstOrDefaultAsync<Column>(sql, new 
+        { 
+            id = id,
+            BoardId = columnsProps.BoardId, 
+            Title = columnsProps.Title, 
+            CreatedBy = columnsProps.CreatedBy, 
+            Position = columnsProps.Position 
+        });
     }
 
     public async Task<Column?> GetColumnById(int id)

@@ -4,7 +4,7 @@ namespace backend.Repositories.Interfaces;
 
 public interface ISpaceRepository
 {
-    Task<Space> CreateSpace(string userId, string spaceName);
+    Task<Space> CreateSpace(Guid userId, string spaceName);
     Task<Space?> GetSpace(string spaceId);
     Task<IEnumerable<Space>> GetSpacesByUser(string userId);
     Task<bool> ChangeSpace(string spaceId, Space space);

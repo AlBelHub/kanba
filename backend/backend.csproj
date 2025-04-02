@@ -15,6 +15,7 @@
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
         <PackageReference Include="Npgsql" Version="8.0.7" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
+        <PackageReference Include="UUID" Version="1.1.1" />
     </ItemGroup>
 
     <ItemGroup>

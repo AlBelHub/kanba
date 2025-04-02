@@ -2,9 +2,9 @@ namespace backend.Models;
 
 public class Board
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
-    public int SpaceId { get; set; }
-    public int OwnerId { get; set; }
+    public Guid SpaceId { get; set; }
+    public Guid OwnerId { get; set; }
     public string CreatedAt { get; set; }
 }
