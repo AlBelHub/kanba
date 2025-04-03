@@ -14,7 +14,8 @@
           "Microsoft.AspNetCore.OpenApi": "8.0.10",
           "Newtonsoft.Json": "13.0.3",
           "Npgsql": "8.0.7",
-          "Swashbuckle.AspNetCore": "6.6.2"
+          "Swashbuckle.AspNetCore": "6.6.2",
+          "UUID": "1.1.1"
         },
         "runtime": {
           "backend.dll": {}
@@ -206,6 +207,14 @@
             "fileVersion": "7.1.2.41121"
           }
         }
+      },
+      "UUID/1.1.1": {
+        "runtime": {
+          "lib/net8.0/UUID.dll": {
+            "assemblyVersion": "1.1.1.0",
+            "fileVersion": "1.1.1.0"
+          }
+        }
       }
     }
   },
@@ -361,6 +370,13 @@
       "sha512": "sha512-Thhbe1peAmtSBFaV/ohtykXiZSOkx59Da44hvtWfIMFofDA3M3LaVyjstACf2rKGn4dEDR2cUpRAZ0Xs/zB+7Q==",
       "path": "system.identitymodel.tokens.jwt/7.1.2",
       "hashPath": "system.identitymodel.tokens.jwt.7.1.2.nupkg.sha512"
+    },
+    "UUID/1.1.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-K/eeCvoeofNIg2SKG04/XbrjBmAYfWEOAJ12XkwPx3dxBSAiUh5CeutPbFgiiRzyWPJqDb3m0DRrtntgIiP2wQ==",
+      "path": "uuid/1.1.1",
+      "hashPath": "uuid.1.1.1.nupkg.sha512"
     }
   }
 }
