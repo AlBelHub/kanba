@@ -24,15 +24,20 @@ public class UserRepository : RepositoryBase, IUserRepository
         return await QueryFirstOrDefaultAsync<string>(sql, new {username = username});
     }
 
-    public async Task<bool> VerifyPasswordHashAsync(string username, string passwordHash)
+    public async Task<bool> VerifyPasswordHashAsync(string username, string password)
     {
-        return _passwordHasher.VerifyHashedPassword(await GetPasswordHashAsync(username), passwordHash);
+        var sql = "SELECT password FROM users WHERE username = @username";
+        var passwordHash = await QueryFirstOrDefaultAsync<string>(sql, new {username = username});
+
+        Console.WriteLine(password);
+        
+        return _passwordHasher.VerifyHashedPassword(await GetPasswordHashAsync(password), passwordHash);
     }
     
     public async Task<bool> UserExistsAsync(string username)
     {
-        string sql = "SELECT * FROM users WHERE username = @username";
-        return await ExecuteScalarAsync<bool>(sql, new {username = username});
+        string sql = "SELECT COUNT(1) FROM users WHERE username = @username";
+        return await ExecuteScalarAsync<int>(sql, new {username = username}) > 0;
     }
     
     public async Task<User> RegisterUserAsync(string username, string password)

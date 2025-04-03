@@ -44,3 +44,4 @@
 /home/aleksey/code/kanba/backend/obj/Debug/net8.0/backend.genruntimeconfig.cache
 /home/aleksey/code/kanba/backend/obj/Debug/net8.0/ref/backend.dll
 /home/aleksey/code/kanba/backend/obj/Debug/net8.0/backend.sourcelink.json
+/home/aleksey/code/kanba/backend/bin/Debug/net8.0/UUID.dll

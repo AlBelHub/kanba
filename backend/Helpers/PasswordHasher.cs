@@ -5,11 +5,16 @@ public class PasswordHasher : IPasswordHasher
 {
     public string HashPassword(string password)
     {
-        return BCrypt.Net.BCrypt.HashPassword(password, GenerateSalt());
+        if (string.IsNullOrEmpty(password))
+        {
+            throw new ArgumentNullException("Password cannot be null or empty.");
+        }
+        
+        return BCrypt.Net.BCrypt.HashPassword(password);
     }
 
     public bool VerifyHashedPassword(string hashedPassword, string providedPassword)
     {
-        return BCrypt.Net.BCrypt.Verify(hashedPassword, providedPassword);
+        return Verify(hashedPassword, providedPassword);
     }
 }

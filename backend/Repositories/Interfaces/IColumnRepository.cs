@@ -5,8 +5,9 @@ namespace backend.Repositories.Interfaces;
 public interface IColumnRepository
 {
     Task<Column> CreateColumn(ColumnsProps columnsProps);
-    Task<Column?> GetColumnById(int id);
-    Task<IEnumerable<Column>> GetColumnsByBoardId(int boardId);
-    Task<bool> UpdateColumn(int id, string title, int position);
-    Task<bool> DeleteColumn(int id);
+    Task<Column?> GetColumnById(Guid id);
+    Task<IEnumerable<Column>> GetColumnsByBoardId(Guid boardId);
+    Task<bool> UpdateColumn(Guid id, string title, Guid position);
+    Task<bool> DeleteColumn(Guid id);
+    Task<bool> MoveAsync(Guid ColumnId, int OldPosition, int NewPosition, Guid BoardId);
 }

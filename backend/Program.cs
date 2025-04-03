@@ -1,7 +1,4 @@
 using System.Data;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using backend.Helpers;
 using backend.Models;
@@ -10,11 +7,11 @@ using backend.Repositories.Interfaces;
 using Dapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Npgsql;
+using Board = backend.Models.Board;
 
 namespace backend;
 
@@ -24,13 +21,7 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        var jwtIssuer = builder.Configuration["Jwt:Issuer"]
-                        ?? throw new InvalidOperationException("JWT Issuer is not configured.");
-        var jwtAudience = builder.Configuration["Jwt:Audience"]
-                          ?? throw new InvalidOperationException("JWT Audience is not configured.");
-        var jwtKey = builder.Configuration["Jwt:Key"]
-                     ?? throw new InvalidOperationException("JWT Key is not configured.");
-
+        builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
@@ -68,7 +59,7 @@ public class Program
             {
                 policy.WithOrigins(
                         "http://localhost:5173",
-                        "http://172.20.0.4:5173",
+                        "http://172.18.0.4:5173",
                         "http://kanba-frontend-1:5173")
                     .AllowAnyHeader()
                     .AllowAnyMethod()
@@ -76,7 +67,8 @@ public class Program
             });
         });
 
-
+        builder.Services.AddControllers();
+        
         builder.Services.AddTransient<IDbConnection>(_ =>
         {
             var connectionString = builder.Configuration.GetConnectionString("Postgres")
@@ -91,7 +83,7 @@ public class Program
         builder.Services.AddTransient<ITaskRepository, TaskRepository>();
         builder.Services.AddTransient<IPasswordHasher, PasswordHasher>();
         builder.Services.AddTransient<IUUIDProvider, UUIDProvider>();
-
+        builder.Services.AddTransient<ITokenGenerator, TokenGenerator>();
         
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(opt =>
@@ -114,6 +106,7 @@ public class Program
         var app = builder.Build();
 
         app.UseCors("AllowFrontend");
+        app.MapControllers();
 
         app.Use((context, next) =>
         {
@@ -132,348 +125,15 @@ public class Program
         app.UseRouting();
 
         // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
+        // if (app.Environment.IsDevelopment())
+        // {
             app.UseSwagger();
             app.UseSwaggerUI();
-        }
+        // }
 
         app.UseHttpsRedirection();
 
         app.UseAuthorization();
-
-        app.MapPost("/login", [AllowAnonymous] async ([FromBody] UserModel login, IUserRepository UserRepository) =>
-        {
-            if (string.IsNullOrWhiteSpace(login.username) || string.IsNullOrWhiteSpace(login.password))
-            {
-                return Results.BadRequest("Invalid credentials");
-            }
-
-            if (!await UserRepository.UserExistsAsync(login.username))
-            {
-                return Results.BadRequest("User not found");
-            }
-
-            if (!await UserRepository.VerifyPasswordHashAsync(login.username, login.password))
-            {
-                return Results.BadRequest("Invalid credentials.");
-            }
-
-            var tokenString = GenerateJSONWebToken(login);
-            return Results.Ok(new { token = tokenString });
-
-        });
-
-        app.MapPost("/register", [AllowAnonymous]
-            async ([FromBody] UserModel newUser, IUserRepository UserRepository) =>
-            {
-                if (string.IsNullOrWhiteSpace(newUser.username) || string.IsNullOrWhiteSpace(newUser.password))
-                {
-                    return Results.BadRequest("Username and Password are required.");
-                }
-
-                if (await UserRepository.UserExistsAsync(newUser.username))
-                {
-                    return Results.BadRequest("User already exists.");
-                }
-
-                var user = await UserRepository.RegisterUserAsync(newUser.username, newUser.password);
-
-                if (user == null)
-                {
-                    return Results.BadRequest("Something went wrong.");
-                }
-
-                return Results.Ok("User registered successfully.");
-            });
-
-        app.MapGet("/validate_token", [Authorize]() => Results.Ok("You have access to this secure endpoint"));
-
-        app.MapGet("/users", async (IUserRepository UserRepository) =>
-        {
-            var users = UserRepository.GetUsersAsync();
-            return Results.Ok(users);
-        });
-
-        //TODO: Выключить этот метод
-        app.MapGet("/spaces", async (IDbConnection db) =>
-        {
-            var spaces = await db.QueryAsync("SELECT id, name, user_id FROM Spaces");
-            return Results.Ok(spaces);
-        });
-
-        app.MapGet("/spaces/{user_id}", async (IDbConnection db, int userId) =>
-        {
-            var spaces = await db.QueryAsync("SELECT id, name, user_id FROM Spaces WHERE user_id = @user_id",
-                new { user_id = userId });
-            //return
-        });
-
-        app.MapGet("/boards/{space_id}", async (int space_id, IDbConnection db) =>
-        {
-            var boards =
-                await db.QueryAsync("SELECT id, name, space_id, owner_id FROM Boards WHERE space_id = @space_id",
-                    new { space_id = space_id });
-            return Results.Ok(boards);
-        });
-
-        app.MapPost("/boards", async ([FromBody] BoardsProps props, IDbConnection db) =>
-        {
-            var query = @"
-                    INSERT INTO Boards (name, space_id, owner_id) VALUES (@name,@space_id,@owner_id)
-                    RETURNING id, name, space_id, owner_id";
-
-            var newBoard = await db.QueryFirstOrDefaultAsync(query, props);
-
-            if (newBoard != null)
-            {
-                return Results.Ok(newBoard);
-            }
-            else
-            {
-                return Results.BadRequest("Что-то пошло не так при создании колонки");
-            }
-        });
-
-        app.MapGet("/columns/{board_id}", [Authorize] async (int board_id, IDbConnection db) =>
-        {
-            var columns =
-                await db.QueryAsync("SELECT id, board_id, title, created_by FROM Columns WHERE board_id = @board_id",
-                    new { board_id = board_id });
-            return Results.Ok(columns);
-        });
-
-        //TODO: ГЕНЕРИРОВАТЬ НОРМАЛЬНЫЙ ID
-        app.MapPost("/columns", async ([FromBody] ColumnsProps props, IDbConnection db) =>
-        {
-
-            var query = @"
-                    INSERT INTO Columns (board_id, title, created_by, position) VALUES (@BoardId, @Title,@CreatedBy, @Position)
-                    RETURNING id, board_id, title, created_by, position";
-
-            var newColumn = await db.QueryFirstOrDefaultAsync(query, props);
-
-            if (newColumn != null)
-            {
-                return Results.Ok(newColumn);
-            }
-            else
-            {
-                return Results.BadRequest("Что-то пошло не так при создании колонки");
-            }
-        });
-
-        ///POST
-        /// /columnMove?ColumnId=1&OldPosition=2&NewPosition=3&SpaceId=1&BoardId=1
-        app.MapGet("/columnMove",
-            async (int ColumnId, int OldPosition, int NewPosition, int SpaceId, int BoardId, IDbConnection db) =>
-            {
-                if (db.State != ConnectionState.Open)
-                {
-                    db.Open();
-                }
-
-                using var transaction = db.BeginTransaction();
-
-                try
-                {
-                    // 1. Проверяем, существует ли колонка с заданным ColumnId
-                    var columnExists = await db.ExecuteScalarAsync<bool>(
-                        "SELECT EXISTS (SELECT 1 FROM columns WHERE id = @ColumnId AND board_id = @BoardId)",
-                        new { ColumnId, BoardId });
-
-                    if (!columnExists)
-                    {
-                        return Results.NotFound(new { message = "Column not found in the specified board" });
-                    }
-
-                    // 2. Если колонка переместилась вниз
-                    if (OldPosition < NewPosition)
-                    {
-                        await db.ExecuteAsync(
-                            "UPDATE columns SET position = position - 1 WHERE position > @OldPosition AND position <= @NewPosition AND board_id = @BoardId",
-                            new { OldPosition, NewPosition, BoardId }, transaction);
-                    }
-                    // 3. Если колонка переместилась вверх
-                    else if (OldPosition > NewPosition)
-                    {
-                        await db.ExecuteAsync(
-                            "UPDATE columns SET position = position + 1 WHERE position < @OldPosition AND position >= @NewPosition AND board_id = @BoardId",
-                            new { OldPosition, NewPosition, BoardId }, transaction);
-                    }
-
-                    // 4. Обновляем позицию перемещённой колонки
-                    await db.ExecuteAsync(
-                        "UPDATE columns SET position = @NewPosition WHERE id = @ColumnId AND board_id = @BoardId",
-                        new { ColumnId, NewPosition, BoardId }, transaction);
-
-                    transaction.Commit();
-                    return Results.Ok(new { message = "Column position updated successfully" });
-                }
-                catch (Exception ex)
-                {
-                    transaction.Rollback();
-                    return Results.BadRequest(new { message = "Failed to update column position", error = ex.Message });
-                }
-            });
-
-
-        //Найти все таски в борде, поменять местами
-
-
-        app.MapGet("/tasks", async (IDbConnection db) =>
-        {
-            var tasks = await db.QueryAsync(
-                "SELECT id, column_id, title, description, status, created_by, assigned_to FROM Tasks");
-
-            return Results.Ok(tasks);
-        });
-
-        app.MapPost("/tasks", async ([FromBody] TaskProps props, IDbConnection db) =>
-        {
-            var sql = @"
-                INSERT INTO Tasks (
-                    column_id, 
-                    board_id, 
-                    title, 
-                    description, 
-                    status, 
-                    position,
-                    created_by
-                ) VALUES (
-                    @column_id,
-                    @board_id,
-                    @title, 
-                    @description, 
-                    @status, 
-                    @position,
-                    @created_by 
-                    ) 
-                RETURNING id::TEXT || 't' AS id ,column_id,board_id,title,description,status,position,created_by";
-
-            var newTask = await db.QueryFirstOrDefaultAsync(sql, props);
-
-            if (newTask != null)
-            {
-                return Results.Ok(newTask);
-            }
-            else
-            {
-                return Results.BadRequest("Что-то пошло не так");
-            }
-        });
-
-
-        //TODD: POST and BODY
-        app.MapGet("/taskMove", async (int OldColumnId, int NewColumnId, int TaskOldPos, int TaskNewPos, int BoardId,
-            int TaskId, IDbConnection db) =>
-        {
-            if (db.State != ConnectionState.Open)
-            {
-                db.Open();
-            }
-
-            using var transaction = db.BeginTransaction();
-            try
-            {
-                if (OldColumnId == NewColumnId)
-                {
-                    // Если перемещаем внутри одной колонки
-                    if (TaskOldPos < TaskNewPos)
-                    {
-                        // Двигаем вверх (уменьшаем номера)
-                        await db.ExecuteAsync(
-                            "UPDATE tasks SET position = position - 1 WHERE column_id = @ColumnId AND position > @TaskOldPos AND position <= @TaskNewPos",
-                            new { ColumnId = OldColumnId, TaskOldPos, TaskNewPos }, transaction);
-                    }
-                    else
-                    {
-                        // Двигаем вниз (увеличиваем номера)
-                        await db.ExecuteAsync(
-                            "UPDATE tasks SET position = position + 1 WHERE column_id = @ColumnId AND position >= @TaskNewPos AND position < @TaskOldPos",
-                            new { ColumnId = OldColumnId, TaskOldPos, TaskNewPos }, transaction);
-                    }
-
-                    // Обновляем позицию задачи
-                    await db.ExecuteAsync(
-                        "UPDATE tasks SET position = @TaskNewPos WHERE id = @TaskId",
-                        new { TaskNewPos, TaskId }, transaction);
-                }
-                else
-                {
-                    // Освобождаем позицию в старой колонке
-                    await db.ExecuteAsync(
-                        "UPDATE tasks SET position = position - 1 WHERE column_id = @OldColumnId AND position > @TaskOldPos",
-                        new { OldColumnId, TaskOldPos }, transaction);
-
-                    // Вставляем задачу в новую колонку
-                    await db.ExecuteAsync(
-                        "UPDATE tasks SET column_id = @NewColumnId, position = @TaskNewPos WHERE id = @TaskId",
-                        new { NewColumnId, TaskNewPos, TaskId }, transaction);
-
-                    // Сдвигаем задачи вниз в новой колонке
-                    await db.ExecuteAsync(
-                        "UPDATE tasks SET position = position + 1 WHERE column_id = @NewColumnId AND position >= @TaskNewPos AND id <> @TaskId",
-                        new { NewColumnId, TaskNewPos, TaskId }, transaction);
-                }
-
-                transaction.Commit();
-                return Results.Ok(new { message = "Task moved successfully" });
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                //!!!!!
-                return Results.Problem(ex.Message);
-            }
-        });
-
-
-
-//TODD: POST and BODY
-        app.MapGet("/columns_with_tasks/{spaceId}/{boardId}", async (int spaceId, int boardId, IDbConnection db) =>
-        {
-            var sql = @"
-                SELECT 
-                    c.id AS ColumnId,
-                    c.title AS ColumnTitle,
-                    c.position AS ColumnPosition,
-                    t.id AS TaskId,
-                    t.title AS TaskTitle,
-                    t.board_id AS BoardId,
-                    t.position AS TaskPosition
-                FROM columns c
-                LEFT JOIN tasks t ON c.id = t.column_id
-                WHERE c.board_id = @boardId
-                AND EXISTS (
-                    SELECT 1 FROM boards b 
-                    WHERE b.id = @boardId 
-                    AND b.space_id = @spaceId
-                )";
-
-            var rows = await db.QueryAsync<ColumnTaskRow>(sql, new { spaceId, boardId });
-
-            // Группируем задачи по колонкам
-            var columns = rows.GroupBy(r => new { r.ColumnId, r.ColumnTitle, r.ColumnPosition })
-                .OrderBy(g => g.Key.ColumnPosition)
-                .Select(g => new Column
-                {
-                    Id = g.Key.ColumnId,
-                    Title = g.Key.ColumnTitle,
-                    Position = g.Key.ColumnPosition,
-                    Tasks = g.Where(t => t.TaskId != null)
-                        .OrderBy(t => t.TaskPosition)
-                        .Select(t => new TaskItem
-                        {
-                            Id = t.TaskId,
-                            Position = t.TaskPosition,
-                            Title = t.TaskTitle
-                        }).ToList()
-                }).ToList();
-
-            return Results.Ok(columns);
-        });
-
 
         EnsureDatabaseCreated(app.Services.GetRequiredService<IDbConnection>(),
                     app.Services.GetRequiredService<IUserRepository>(), 
@@ -484,27 +144,7 @@ public class Program
 
         app.Run();
 
-        string GenerateJSONWebToken(UserModel userInfo)
-        {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, userInfo.username),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            var token = new JwtSecurityToken(jwtIssuer,
-                jwtIssuer,
-                claims,
-                expires: DateTime.Now.AddMinutes(120),
-                signingCredentials: credentials);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-
-        }
-
+     
         async void EnsureDatabaseCreated(
             IDbConnection db, 
             IUserRepository userRepository, 
@@ -592,14 +232,14 @@ public class Program
             if (userCount == 0)
             {
                 // Создаём пользователя
-                var user = await userRepository.RegisterUserAsync("default", "default");
+                var user = await userRepository.RegisterUserAsync("admin", "admin");
 
                 if (user == null)
                 {
                     Console.WriteLine("User not registered");
                 }
                 
-                Console.WriteLine("Inserted default user " + user.id + " " + user.username);
+                Console.WriteLine("Inserted default user " + user.id + " " + user.username + " " + user.password);
                 
                 // Допустим, после вставки пользователя его id равен 1.
                 // Создаём пространство для пользователя
