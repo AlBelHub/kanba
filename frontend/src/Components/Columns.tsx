@@ -6,6 +6,7 @@ import { Column, Task } from "../Types/types";
 import { CSS } from "@dnd-kit/utilities";
 import TaskItem from "./TaskItem";
 import { createTask } from "../Utils/Api";
+import { useAppStore } from "../Store/useAppStore";
 
 interface ColumnProps {
   colId: string;
@@ -28,6 +29,8 @@ export default function Columns({ colId, colName, tasks, setColumns, onTaskClick
     data: { type: "column" },
   });
 
+  const { spaceId, boardId, userId} = useAppStore.getState();
+
   const { setNodeRef: droppableRef } = useDroppable({
     id: colId,
     data: { columnId: colId },
@@ -45,15 +48,19 @@ export default function Columns({ colId, colName, tasks, setColumns, onTaskClick
 
   //TODO: получать с бека только id
   const handleAddTask = async () => {
+ 
+    throw new Error("NOT IMPLEMENTED");
+    
+ 
     try {
       const newTask = await createTask({
-        board_id: 1, 
-        column_id: parseInt(colId),
+        board_id: boardId, 
+        column_id: colId,
         title: "New Task", // заменить на пользовательский ввод
         description: "Task description",
         status: "open",
         position: !tasks || tasks.length === 0 ? 1 : Math.max(...tasks.map(task => task.position), 0) + 1,
-        created_by: 1,
+        created_by: userId,
       });
   
       setColumns((prev) =>

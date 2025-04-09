@@ -35,7 +35,7 @@ export type TaskBodyProps = {
 }
 
 export type Board = {
-  id: number;
+  id: string;
   name: string;
   space_id: string;
   owner_id: string;
@@ -86,6 +86,7 @@ export type Space = {
 };
 
 export type User = {
+  id: string;
   username: string;
   password: string;
 }

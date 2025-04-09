@@ -71,7 +71,7 @@ async function loginAndRetry(url: string, options: RequestInit) {
     return fetchData(url, options);
   } catch (error) {
     console.error("Не удалось войти:", error);
-    throw error;
+    throw error;  
   }
 }
 
@@ -151,6 +151,7 @@ export async function validateToken(): Promise<any> {
  */
 export async function getBoards(spaceId: string): Promise<Board[]> {
   const url = `/Boards/getBoards/${spaceId}`;
+  console.log(url)
   try {
     const boards = await fetchData(url);
     console.log("Получены доски:", boards);
@@ -205,6 +206,7 @@ export async function getColumnsByBoardId(boardId: string): Promise<Column[]> {
  */
 export async function createColumn(column: ColumnsProps): Promise<Column> {
   const url = "/Columns";
+  console.log(column)
   const options: RequestInit = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -267,7 +269,7 @@ export async function moveColumn(params: {
 export async function getColumnsAndTasks(
   spaceId: string,
   boardId: string
-): Promise<{ columns: Column[]; tasks: Task[] }> {
+): Promise<Column[]> {
   const url = `/Columns/getColumnsAndTasks/${spaceId}/${boardId}`;
   try {
     const data = await fetchData(url);
