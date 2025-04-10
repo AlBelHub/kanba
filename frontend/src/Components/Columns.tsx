@@ -48,8 +48,6 @@ export default function Columns({ colId, colName, tasks, setColumns, onTaskClick
 
   //TODO: получать с бека только id
   const handleAddTask = async () => {
- 
-    throw new Error("NOT IMPLEMENTED");
     
  
     try {
@@ -60,7 +58,7 @@ export default function Columns({ colId, colName, tasks, setColumns, onTaskClick
         description: "Task description",
         status: "open",
         position: !tasks || tasks.length === 0 ? 1 : Math.max(...tasks.map(task => task.position), 0) + 1,
-        created_by: userId,
+        created_by: String(userId),
       });
   
       setColumns((prev) =>
