@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers;
 
+[ApiController]
+[Route("api/[controller]")]
 public class TaskController : KanbaControllerBase
 {
     private readonly ITaskRepository _taskRepository;
@@ -27,33 +29,15 @@ public class TaskController : KanbaControllerBase
     [HttpPost("createTask")]
     public async Task<IActionResult> CreateTask([FromBody] TaskProps props)
     {
-        var sql = @"
-            INSERT INTO Tasks (
-                column_id, 
-                board_id, 
-                title, 
-                description, 
-                status, 
-                position,
-                created_by
-            ) VALUES (
-                @column_id,
-                @board_id,
-                @title, 
-                @description, 
-                @status, 
-                @position,
-                @created_by 
-            ) 
-            RETURNING id::TEXT || 't' AS id, column_id, board_id, title, description, status, position, created_by";
-
-        var newTask = await _db.QueryFirstOrDefaultAsync(sql, props);
+       
+        var newTask = await _taskRepository.CreateTask(props);
 
         if (newTask != null)
         {
             return Ok(newTask);
         }
-        return BadRequest("Что-то пошло не так");
+
+        return BadRequest("Error creating task");
     }
 
     [HttpPost("moveTask")]
