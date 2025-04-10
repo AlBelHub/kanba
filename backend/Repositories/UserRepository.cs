@@ -56,7 +56,11 @@ public class UserRepository : RepositoryBase, IUserRepository
         return await _db.QueryFirstOrDefaultAsync<User>(sql, new {id = id,username = username, password = passwordHash});
     }
     
-    
+    public async Task<Guid> GetUserId(string username)
+    {
+        string sql = "SELECT id FROM users WHERE username = @username";
+        return await _db.QueryFirstOrDefaultAsync<Guid>(sql, new {username = username});
+    }
 
     public async Task<IEnumerable<User>> GetUsersAsync()
     {

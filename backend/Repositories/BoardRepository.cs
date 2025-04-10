@@ -22,12 +22,8 @@ public class BoardRepository : RepositoryBase, IBoardRepository
     
         string sql = @"
         INSERT INTO Boards (id, name, space_id, owner_id) 
-        SELECT @Id, @Name, @SpaceId, @OwnerId
-        WHERE NOT EXISTS (
-            SELECT 1 FROM Boards 
-            WHERE name = @Name AND space_id = @SpaceId
-        )
-        RETURNING *";
+        VALUES (@Id, @Name, @SpaceId, @OwnerId)
+        RETURNING *;";
 
         return await _db.QueryFirstOrDefaultAsync<Board>(sql, new 
         { 

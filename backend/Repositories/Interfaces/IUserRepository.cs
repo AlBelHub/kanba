@@ -8,5 +8,6 @@ public interface IUserRepository
     Task<bool> VerifyPasswordHashAsync(string username, string password);
     Task<bool> UserExistsAsync(string username);
     Task<User> RegisterUserAsync(string username, string password);
+    Task<Guid> GetUserId(string username);
     Task<IEnumerable<User>> GetUsersAsync();
 }
