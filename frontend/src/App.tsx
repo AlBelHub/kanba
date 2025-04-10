@@ -15,9 +15,47 @@ import Sidebar from "./Sidebar";
 import { createColumn, getBoards, getColumnsAndTasks, moveColumn, moveTask } from "./Utils/Api";
 import FloatingWindow from "./Components/FloatingWindow";
 import { useAppStore } from "./Store/useAppStore";
+import { useLoaderData, useParams } from "react-router";
 
 function App() {
-  const {boardId, userId, spaceId} = useAppStore.getState();
+  
+  const { userId } = useLoaderData()
+  const {spaceId, boardId} = useParams();
+
+  const setUserId = useAppStore((s) => s.setUserId);
+  const setSpaceId = useAppStore((s) => s.setSpaceId);
+  const setBoardId = useAppStore((s) => s.setBoardId);
+  const setBoard = useAppStore((s) => s.setBoard);
+
+  useEffect(() => {
+    setUserId(userId);
+
+    if (spaceId === "undefined") {
+      throw new Error("spaceId URL error")
+    }
+    
+    setSpaceId(String(spaceId));
+
+    if (boardId === "undefined") {
+      throw new Error("boardId URL error")
+    }
+
+    setBoardId(String(boardId));
+
+    getBoards(String(spaceId)).then((data) => {
+      const board = data.find((b) => b.id === boardId);
+      if (board) {
+        setBoard(board);
+        console.log("BOARD IS SET!")
+      } else {
+        throw new Error("Board not found");
+      }
+    });
+
+
+  }, [userId, spaceId, boardId]);
+
+// ИСПРАВИТЬ АПИ МУВ ТАСК И СДЕЛАТЬ НОРМАЛЬНЫЙ РАУТ ДО НЕЁ
 
 //#region UI 
 
@@ -116,7 +154,6 @@ function App() {
     // Перетаскивание колонок
     if (active.data.current?.type === "column") {
       const oldIndex = columns.findIndex((col) => col.id === active.id);
-      const oldIndexReal = columns[oldIndex].id;
       const newIndex = columns.findIndex((col) => col.id === over.id);
 
       if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) {
@@ -145,13 +182,6 @@ function App() {
         newPosition: Number(newPos),
         boardId: boardId,
       });
-
-      // fetchData(
-      //   `/columnMove?ColumnId=${parseInt(columns[oldIndex].id)}&OldPosition=${
-      //     columns[oldIndex].position
-      //   }&NewPosition=${newPos}&SpaceId=${TEST_DATA__SPACE_ID}&BoardId=${TEST_DATA__BOARD_ID}`
-      // );
-
     }
 
     // Перетаскивание задач
@@ -167,9 +197,6 @@ function App() {
 
       const activeColumn = columns.find((col) => col.id === activeColumnId);
       const overColumn = columns.find((col) => col.id === overColumnId);
-
-      const activeColPos = active.data.current.sortable.index + 1;
-
       if (!activeColumn || !overColumn) {
         setActiveTask(null);
         setActiveColumn(null);
@@ -192,7 +219,7 @@ function App() {
 
           moveTask(
             {
-              boardId: boardId,
+              boardId: String(boardId),
               oldColumnId: activeColumnId,
               newColumnId: overColumnId,
               taskId: active.id.toString(),
@@ -200,18 +227,6 @@ function App() {
               taskOldPos: activeTaskIndex + 1,
             }
           )
-
-          // fetchData(
-          //   `/taskMove?OldColumnId=${parseInt(
-          //     activeColumnId
-          //   )}&NewColumnId=${parseInt(overColumnId)}&TaskOldPos=${
-          //     activeTaskIndex + 1
-          //   }&TaskNewPos=${
-          //     !overTaskIndex ? 1 : overTaskIndex + 1
-          //   }&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(
-          //     active.id.toString()
-          //   )}`
-          // );
 
           setColumns(
             columns.map((col) =>
@@ -233,7 +248,7 @@ function App() {
 
         moveTask(
           {
-            boardId: boardId,
+            boardId: String(boardId),
             oldColumnId: activeColumnId,
             newColumnId: overColumnId,
             taskId: active.id.toString(),
@@ -241,18 +256,6 @@ function App() {
             taskOldPos: activeTaskIndex + 1,
           }
         )
-
-        // fetchData(
-        //   `/taskMove?OldColumnId=${parseInt(
-        //     activeColumnId
-        //   )}&NewColumnId=${parseInt(overColumnId)}&TaskOldPos=${
-        //     activeTaskIndex + 1
-        //   }&TaskNewPos=${
-        //     !overTaskIndex ? 1 : overTaskIndex + 1
-        //   }&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(
-        //     active.id.toString()
-        //   )}`
-        // );
 
         setColumns(
           columns.map((col) => {
@@ -272,17 +275,8 @@ function App() {
 
   return (
     <>
-      <div className="main">
-        <div className="topbar">
-          <div className="topbar-logo">
-            <h1>logo</h1>
-          </div>
-          <div className="topbar-content">table</div>
-        </div>
-
-        <div className="flex-column">
-          <Sidebar />
-          <div className="app">
+      
+      
             <div className="scroll-wrapper" ref={scrollRef}>
               <div className="columns-container">
                 <DndContext
@@ -330,9 +324,6 @@ function App() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
 
       {openWindows.map(({ task, columnId }) => (
         <FloatingWindow

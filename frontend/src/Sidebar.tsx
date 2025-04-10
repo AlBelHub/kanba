@@ -33,7 +33,10 @@ export default function Sidebar() {
 
       useEffect(() => {
   
-        getBoards(spaceId).then((data) => setBoards(data))
+        if (spaceId !== "NOT SET") {
+          
+          getBoards(spaceId).then((data) => setBoards(data))
+        }
         // fetchData(`/Boards/getBoards/${TEST_DATA__SPACE_ID}`).then(data => setBoards(data));
     
       }, []);

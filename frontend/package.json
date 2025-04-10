@@ -17,7 +17,9 @@
     "motion": "^12.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "xp.css": "^0.2.6"
+    "react-router": "^7.5.0",
+    "xp.css": "^0.2.6",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
