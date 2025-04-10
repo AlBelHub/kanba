@@ -4,7 +4,8 @@ using backend.Models;
 using backend.Repositories.Abstract;
 using backend.Repositories.Interfaces;
 using Dapper;
-using Task = System.Threading.Tasks.Task;
+using KanbaTask = backend.Models.Task;
+
 
 namespace backend.Repositories;
 
@@ -16,7 +17,7 @@ public class TaskRepository : RepositoryBase, ITaskRepository
         _uuidProvider = uuidProvider;
     }
 
-    public async Task<Task> CreateTask(TaskProps taskProps)
+    public async Task<KanbaTask> CreateTask(TaskProps taskProps)
     {
         string sql = @"
         INSERT INTO Tasks (
@@ -43,7 +44,7 @@ public class TaskRepository : RepositoryBase, ITaskRepository
         )
         RETURNING *";
 
-        return await _db.QueryFirstOrDefaultAsync<Task>(sql, new
+        return await _db.QueryFirstOrDefaultAsync<KanbaTask>(sql, new
         {
             id = _uuidProvider.GenerateUUIDv7(),
             ColumnId = taskProps.column_id,
@@ -57,22 +58,22 @@ public class TaskRepository : RepositoryBase, ITaskRepository
         });
     }
 
-    public Task<Task?> GetTaskById(int id)
+    public Task<KanbaTask?> GetTaskById(int id)
     {
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<Task>> GetTasksByBoardId(int boardId)
+    public Task<IEnumerable<KanbaTask>> GetTasksByBoardId(int boardId)
     {
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<Task>> GetTasksByColumnId(int columnId)
+    public Task<IEnumerable<KanbaTask>> GetTasksByColumnId(int columnId)
     {
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<Task>> GetTasksByUserId(int userId)
+    public Task<IEnumerable<KanbaTask>> GetTasksByUserId(int userId)
     {
         throw new NotImplementedException();
     }
