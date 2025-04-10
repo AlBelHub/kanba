@@ -12,12 +12,14 @@ import "./App.css";
 import Columns from "./Components/Columns";
 import TaskItem from "./Components/TaskItem";
 import Sidebar from "./Sidebar";
-import fetchData, { createColumn } from "./Utils/Api";
+import { createColumn, getBoards, getColumnsAndTasks, moveColumn, moveTask } from "./Utils/Api";
 import FloatingWindow from "./Components/FloatingWindow";
+import { useAppStore } from "./Store/useAppStore";
 
 function App() {
-  const TEST_DATA__SPACE_ID = 1;
-  const TEST_DATA__BOARD_ID = 1;
+  const {boardId, userId, spaceId} = useAppStore.getState();
+
+//#region UI 
 
   const [openWindows, setOpenWindows] = useState<
     { task: Task; columnId: string }[]
@@ -35,22 +37,23 @@ function App() {
   };
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  
+  const [activeTask, setActiveTask] = useState<any>(null);
+  const [activeColumn, setActiveColumn] = useState<any>(null);
+  
+  //#endregion
   const [columns, setColumns] = useState<Column[]>([
     {
       id: "todo",
-      title: "Видать",
+      title: "Если вы видете эту задачу, то я не вижу БД",
       position: 1,
       tasks: [{ id: "task-1", title: "Первая задача", position: 1 }],
     },
   ]);
-
-  const [activeTask, setActiveTask] = useState<any>(null);
-  const [activeColumn, setActiveColumn] = useState<any>(null);
-
+  
+  // CHECK
   useEffect(() => {
-    fetchData(
-      `/columns_with_tasks/${TEST_DATA__SPACE_ID}/${TEST_DATA__BOARD_ID}`
-    ).then((data) => setColumns(data));
+    getColumnsAndTasks(spaceId, boardId).then((data) => setColumns(data))
   }, []);
 
   useEffect(() => {
@@ -92,9 +95,9 @@ function App() {
   const handleAddColumn = async () => {
     const highestPos = Math.max(...columns.map((item) => item.position)) + 1;
     const newColumn = await createColumn({
-      boardId: TEST_DATA__BOARD_ID,
+      boardId: boardId,
       title: "created from button + back",
-      createdBy: 1,
+      createdBy: userId,
       position: highestPos,
     });
     newColumn.tasks = [];
@@ -135,11 +138,19 @@ function App() {
         (col) => col.id === active.id
       )?.position;
 
-      fetchData(
-        `/columnMove?ColumnId=${parseInt(columns[oldIndex].id)}&OldPosition=${
-          columns[oldIndex].position
-        }&NewPosition=${newPos}&SpaceId=${TEST_DATA__SPACE_ID}&BoardId=${TEST_DATA__BOARD_ID}`
-      );
+      //check
+      moveColumn({
+        columnId: columns[oldIndex].id,
+        oldPosition: columns[oldIndex].position,
+        newPosition: Number(newPos),
+        boardId: boardId,
+      });
+
+      // fetchData(
+      //   `/columnMove?ColumnId=${parseInt(columns[oldIndex].id)}&OldPosition=${
+      //     columns[oldIndex].position
+      //   }&NewPosition=${newPos}&SpaceId=${TEST_DATA__SPACE_ID}&BoardId=${TEST_DATA__BOARD_ID}`
+      // );
 
     }
 
@@ -179,17 +190,28 @@ function App() {
             overTaskIndex
           );
 
-          fetchData(
-            `/taskMove?OldColumnId=${parseInt(
-              activeColumnId
-            )}&NewColumnId=${parseInt(overColumnId)}&TaskOldPos=${
-              activeTaskIndex + 1
-            }&TaskNewPos=${
-              !overTaskIndex ? 1 : overTaskIndex + 1
-            }&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(
-              active.id.toString()
-            )}`
-          );
+          moveTask(
+            {
+              boardId: boardId,
+              oldColumnId: activeColumnId,
+              newColumnId: overColumnId,
+              taskId: active.id.toString(),
+              taskNewPos: !overTaskIndex ? 1 : overTaskIndex + 1,
+              taskOldPos: activeTaskIndex + 1,
+            }
+          )
+
+          // fetchData(
+          //   `/taskMove?OldColumnId=${parseInt(
+          //     activeColumnId
+          //   )}&NewColumnId=${parseInt(overColumnId)}&TaskOldPos=${
+          //     activeTaskIndex + 1
+          //   }&TaskNewPos=${
+          //     !overTaskIndex ? 1 : overTaskIndex + 1
+          //   }&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(
+          //     active.id.toString()
+          //   )}`
+          // );
 
           setColumns(
             columns.map((col) =>
@@ -209,17 +231,28 @@ function App() {
         const updatedOverTasks = [...overColumn.tasks];
         updatedOverTasks.splice(overTaskIndex || 0, 0, task);
 
-        fetchData(
-          `/taskMove?OldColumnId=${parseInt(
-            activeColumnId
-          )}&NewColumnId=${parseInt(overColumnId)}&TaskOldPos=${
-            activeTaskIndex + 1
-          }&TaskNewPos=${
-            !overTaskIndex ? 1 : overTaskIndex + 1
-          }&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(
-            active.id.toString()
-          )}`
-        );
+        moveTask(
+          {
+            boardId: boardId,
+            oldColumnId: activeColumnId,
+            newColumnId: overColumnId,
+            taskId: active.id.toString(),
+            taskNewPos: !overTaskIndex ? 1 : overTaskIndex + 1,
+            taskOldPos: activeTaskIndex + 1,
+          }
+        )
+
+        // fetchData(
+        //   `/taskMove?OldColumnId=${parseInt(
+        //     activeColumnId
+        //   )}&NewColumnId=${parseInt(overColumnId)}&TaskOldPos=${
+        //     activeTaskIndex + 1
+        //   }&TaskNewPos=${
+        //     !overTaskIndex ? 1 : overTaskIndex + 1
+        //   }&BoardId=${TEST_DATA__BOARD_ID}&TaskId=${parseInt(
+        //     active.id.toString()
+        //   )}`
+        // );
 
         setColumns(
           columns.map((col) => {

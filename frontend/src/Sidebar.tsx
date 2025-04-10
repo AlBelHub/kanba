@@ -1,49 +1,45 @@
 import React, { useEffect, useState } from 'react'
-import fetchData, { createBoard } from './Utils/Api';
+import { createBoard, getBoards } from './Utils/Api';
 import { Board } from './Types/types';
+import { useAppStore } from './Store/useAppStore';
 
 export default function Sidebar() {
 
-    const TEST_DATA__BOARD_ID = 1;
+    const { spaceId, boardId, userId } = useAppStore.getState();
 
     const [boards, setBoards] = useState<Board[]>(
         [
           {
-            "id": 1,
-            "name": "My Board",
-            "space_id": 1,
-            "owner_id": 1
+            "id": "CREATED_MANUALLY_1",
+            "name": "My Board1",
+            "space_id": spaceId,
+            "owner_id": userId,
           },
           {
-            "id": 2,
-            "name": "Web Development",
-            "space_id": 1,
-            "owner_id": 1
+            "id": "CREATED_MANUALLY_2",
+            "name": "My Board2",
+            "space_id": spaceId,
+            "owner_id": userId,
           },
           {
-            "id": 3,
-            "name": "My Boasdadasard",
-            "space_id": 1,
-            "owner_id": 1
+            "id": "CREATED_MANUALLY_3",
+            "name": "My Board3",
+            "space_id": spaceId,
+            "owner_id": userId,
           },
-          {
-            "id": 4,
-            "name": "Web Develagsgsdgagopment",
-            "space_id": 1,
-            "owner_id": 1
-          }
+        
         ]
       )
 
-
       useEffect(() => {
   
-        fetchData(`/boards/${TEST_DATA__BOARD_ID}`).then(data => setBoards(data));
+        getBoards(spaceId).then((data) => setBoards(data))
+        // fetchData(`/Boards/getBoards/${TEST_DATA__SPACE_ID}`).then(data => setBoards(data));
     
       }, []);
     
       const handleAddBoard = async () => {
-        const newBoard : Board = await createBoard({name: "Yay! New board!", owner_id: 1, space_id: 1})
+        const newBoard : Board = await createBoard({name: "Yay! New board!", owner_id: userId, space_id: spaceId})
         setBoards([...boards, newBoard]);
       }
 
