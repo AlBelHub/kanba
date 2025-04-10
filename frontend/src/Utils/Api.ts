@@ -82,7 +82,7 @@ async function loginAndRetry(url: string, options: RequestInit) {
  * POST — Аутентификация пользователя.
  * @param credentials данные для входа типа UserModel
  */
-export async function loginUser(credentials: UserModel): Promise<UserModel> {
+export async function loginUser(credentials: UserModel): Promise<string> {
   const url = "/Auth/login";
   const options: RequestInit = {
     method: "POST",
@@ -318,7 +318,7 @@ export async function getSpacesByUserId(userId: string): Promise<Space[]> {
  * GET — Получает список задач.
  */
 export async function getTasks(): Promise<Task[]> {
-  const url = "/getTasks";
+  const url = "/Task/getTasks";
   try {
     const tasks = await fetchData(url);
     console.log("Получены задачи:", tasks);
@@ -334,7 +334,7 @@ export async function getTasks(): Promise<Task[]> {
  * POST — Создает задачу.
  */
 export async function createTask(task: TaskProps): Promise<Task> {
-  const url = "/createTask";
+  const url = "/Task/createTask";
   const options: RequestInit = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -356,7 +356,7 @@ export async function createTask(task: TaskProps): Promise<Task> {
  * POST — Перемещает задачу.
  */
 export async function moveTask(moveReq: TaskMoveRequest): Promise<any> {
-  const url = "/moveTask";
+  const url = "/Task/moveTask";
   const options: RequestInit = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -388,3 +388,21 @@ export async function getUsers(): Promise<User[]> {
     throw error;
   }
 }
+
+/**
+ * /api/User/getUserId  
+ * GET — Получить id юзера.
+ */
+export async function getUserId(username: string): Promise<string> {
+  const url = `/User/getUserId/${username}`;
+  try {
+    const users = await fetchData(url);
+    console.log("Получены пользователи:", users);
+    return users;
+  } catch (error) {
+    console.error("Ошибка получения пользователей:", error);
+    throw error;
+  }
+}
+
+

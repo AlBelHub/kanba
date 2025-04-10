@@ -131,9 +131,20 @@ function App() {
     }
   };
   const handleAddColumn = async () => {
-    const highestPos = Math.max(...columns.map((item) => item.position)) + 1;
+
+    let highestPos : number;
+
+    if (columns.length > 0) {
+      highestPos = Math.max(...columns.map((item) => item.position)) + 1;
+    }else{
+      highestPos = 1;
+    }
+
+    
+
+
     const newColumn = await createColumn({
-      boardId: boardId,
+      boardId: String(boardId),
       title: "created from button + back",
       createdBy: userId,
       position: highestPos,

@@ -63,7 +63,7 @@ export default function Sidebar() {
             </div>
 
 
-            <div className="sidebar-buttons">
+            {/* <div className="sidebar-buttons">
               <button type="button" className='sidebar-button hover_darkgray' onClick={handleAddBoard}>Добавить доску</button>
             
                 {
@@ -71,7 +71,7 @@ export default function Sidebar() {
                         <button type="button" className='sidebar-button hover_darkgray' key={board.id}>{board.name}</button>
                     ))
                 }
-            </div>
+            </div> */}
 
         </div>
     );

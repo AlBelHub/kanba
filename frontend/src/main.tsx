@@ -5,12 +5,17 @@ import RootLayout from "./RootLayout.tsx";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { initApp } from "./TEMP_DELETE/InitApp.ts";
 import BoardsViewer from "./BoardsViewer.tsx";
+import LoginPage from "./Components/LoginPage.tsx";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <RootLayout />,
     children: [
+      {
+        index: true,
+        element: <LoginPage />
+      },
       {
         path: "/:spaceId",
         element: <BoardsViewer />,
