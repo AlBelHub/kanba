@@ -15,6 +15,13 @@ public class UserController : KanbaControllerBase
         _userRepository = userRepository;
     }
 
+    [HttpGet("getUserId/{username}")]
+    public async Task<IActionResult> GetUserId(string username)
+    {
+        var userId = await _userRepository.GetUserId(username);
+        return Ok(userId);
+    }
+
     [HttpGet("getUsers")]
     public async Task<IActionResult> GetUsers()
     {
