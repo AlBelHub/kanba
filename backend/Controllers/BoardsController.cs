@@ -27,19 +27,18 @@ public class BoardsController : KanbaControllerBase
     [HttpPost("createBoard")]
     public async Task<IActionResult> CreateBoard([FromBody] BoardsProps props)
     {
-        var query = @"
-            INSERT INTO Boards (name, space_id, owner_id) VALUES (@name, @space_id, @owner_id)
-            RETURNING id, name, space_id, owner_id";
         
-        var newBoard = await _db.QueryFirstOrDefaultAsync(query, props);
+        var newBoard = await _boardRepository.CreateBoard(props);
 
+        Console.WriteLine(newBoard);
+        
         if (newBoard != null)
         {
             return Ok(newBoard);
         }
         else
         {
-            return BadRequest("Что-то пошло не так при создании колонки");
+            return BadRequest("Что-то пошло не так при создании доски");
         }
     }
 }
