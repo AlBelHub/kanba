@@ -32,9 +32,9 @@ public class BoardRepository : RepositoryBase, IBoardRepository
         return await _db.QueryFirstOrDefaultAsync<Board>(sql, new 
         { 
             Id = id, 
-            Name = boardsProps.Name, 
-            SpaceId = boardsProps.SpaceId, 
-            OwnerId = boardsProps.OwnerId
+            Name = boardsProps.name, 
+            SpaceId = boardsProps.space_id, 
+            OwnerId = boardsProps.owner_id
         });
     }
 

@@ -19,10 +19,11 @@ public class SpaceController : KanbaControllerBase
         return Ok(spaces);
     }
 
+    // TYPO
     [HttpGet("getSpacesNyUserId/{userId:guid}")]
     public async Task<IActionResult> GetSpacesByUserId(Guid userId)
     {
-        var spaces = await _db.QueryAsync<Space>("SELECT id, name, user_id, created_at FROM Spaces WHERE user_id = @user_id", new { userId = userId });
+        var spaces = await _db.QueryAsync<Space>("SELECT id, name, user_id, created_at FROM Spaces WHERE user_id = @user_id", new { user_id = userId });
         if (!spaces.Any()) return NotFound();
         return Ok(spaces);
     }

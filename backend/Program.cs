@@ -268,7 +268,7 @@ public class Program
 
                 foreach (var board in boards)
                 {
-                    var createdBoard = await boardRepository.CreateBoard(new BoardsProps {Name = board.Name, SpaceId = board.SpaceId, OwnerId = board.OwnerId});
+                    var createdBoard = await boardRepository.CreateBoard(new BoardsProps {name = board.Name, space_id = board.SpaceId, owner_id = board.OwnerId});
 
                     if (createdBoard == null)
                     {
