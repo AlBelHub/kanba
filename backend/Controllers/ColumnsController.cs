@@ -85,7 +85,7 @@ public class ColumnsController : KanbaControllerBase
                 Id = g.Key.ColumnId,
                 Title = g.Key.ColumnTitle,
                 Position = g.Key.ColumnPosition,
-                Tasks = g.Where(t => t.TaskId != null)
+                Tasks = g.Where(t => t.TaskId != null && t.TaskId != Guid.Empty)
                     .OrderBy(t => t.TaskPosition)
                     .Select(t => new TaskItem
                     {
