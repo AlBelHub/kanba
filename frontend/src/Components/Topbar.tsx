@@ -8,7 +8,7 @@ export default function Topbar() {
   return (
     <div className="topbar">
       <div className="topbar-logo">
-        <h1>logo</h1>
+        <h1></h1>
       </div>
       <div className="topbar-content">
         {board ? board.name : "Выбери над чем работать сегодня..."}

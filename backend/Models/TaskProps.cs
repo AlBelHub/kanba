@@ -9,4 +9,6 @@ public class TaskProps
     public string status { get; set; }
     public int position { get; set; }
     public Guid created_by { get; set; }
+    public Guid assigned_to { get; set; }
+
 }
