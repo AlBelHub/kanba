@@ -4,6 +4,7 @@ using backend.Models;
 using backend.Repositories.Abstract;
 using backend.Repositories.Interfaces;
 using Dapper;
+using Microsoft.AspNetCore.Mvc;
 using KanbaTask = backend.Models.Task;
 
 
@@ -58,33 +59,73 @@ public class TaskRepository : RepositoryBase, ITaskRepository
         });
     }
 
-    public Task<KanbaTask?> GetTaskById(int id)
+    public Task<KanbaTask?> GetTaskById(Guid id)
     {
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<KanbaTask>> GetTasksByBoardId(int boardId)
+    public Task<IEnumerable<KanbaTask>> GetTasksByBoardId(Guid boardId)
     {
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<KanbaTask>> GetTasksByColumnId(int columnId)
+    public Task<IEnumerable<KanbaTask>> GetTasksByColumnId(Guid columnId)
     {
         throw new NotImplementedException();
     }
 
-    public Task<IEnumerable<KanbaTask>> GetTasksByUserId(int userId)
+    public Task<IEnumerable<KanbaTask>> GetTasksByUserId(Guid userId)
     {
         throw new NotImplementedException();
     }
 
-    public Task<bool> UpdateTask(int id, string title, string? description, string status, int position, int? assignedTo)
+    public async Task<bool> UpdateTask(Guid id, TaskProps props)
     {
-        throw new NotImplementedException();
+        string sql = @"
+        UPDATE Tasks
+        SET 
+            title = @Title,
+            description = @Description,
+            status = @Status,
+            position = @Position,
+            assigned_to = @AssignedTo
+        WHERE id = @Id";
+
+        int affectedRows = await _db.ExecuteAsync(sql, new
+        {
+            Id = id,
+            Title = props.title,
+            Description = props.description,
+            Status = props.status,
+            Position = props.position,
+            AssignedTo = props.assigned_to
+        });
+
+        return affectedRows > 0;
     }
 
-    public Task<bool> DeleteTask(int id)
+    public async Task<TaskWithUsersDto> getTaskDetails(Guid id)
     {
-        throw new NotImplementedException();
+        string sql = @"SELECT 
+                        t.*, 
+                        u1.id AS created_by_id, u1.username AS created_by_username,
+                        u2.id AS assigned_to_id, u2.username AS assigned_to_username
+                        FROM Tasks t
+                        LEFT JOIN Users u1 ON t.created_by = u1.id
+                        LEFT JOIN Users u2 ON t.assigned_to = u2.id
+                        WHERE t.id = @Id";
+        
+        var task = await _db.QueryFirstOrDefaultAsync<TaskWithUsersDto>(sql, new { Id = id });
+        
+        return task;
+    }
+    
+    public async Task<bool> DeleteTask(Guid id)
+    {
+        string sql = "DELETE FROM Tasks WHERE id = @Id";
+
+        int affectedRows = await _db.ExecuteAsync(sql, new { Id = id });
+
+        return affectedRows > 0;
     }
 }

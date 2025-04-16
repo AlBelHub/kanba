@@ -10,6 +10,7 @@ import {
   Task,
   Space,
   User,
+  TaskWithUsersDto,
 } from "../Types/types";
 
 const API_BASE_URL = "http://172.18.0.3:8080/api";
@@ -329,6 +330,23 @@ export async function getTasks(): Promise<Task[]> {
   }
 }
 
+export async function getTaskDetail(id: string) {
+  const url = `/Task/getTaskDetail/${id}`
+  const options: RequestInit = {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  };
+
+  try {
+    const taskDetail: TaskWithUsersDto = await fetchData(url, options);
+    console.log("Получены данные о задаче:", taskDetail);
+    return taskDetail;
+  } catch (error) {
+    console.error("Ошибка получения данных", error);
+    throw error;
+  }
+}
+
 /**
  * /createTask  
  * POST — Создает задачу.
@@ -347,6 +365,54 @@ export async function createTask(task: TaskProps): Promise<Task> {
     return newTask;
   } catch (error) {
     console.error("Ошибка создания задачи:", error);
+    throw error;
+  }
+}
+
+/**
+ * /updateTask  
+ * PUT — Обновляет задачу.
+ */
+export async function updateTask(taskId: string, update: {
+  title: string;
+  description?: string;
+  status: string;
+  position: number;
+  assigned_to?: string;
+}): Promise<boolean> {
+  const url = `/Task/updateTask?id=${taskId}`;
+  const options: RequestInit = {
+    method: "PUT", // можно заменить на POST, если API требует
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(update),
+  };
+
+  try {
+    const result = await fetchData(url, options);
+    console.log("Задача обновлена:", result);
+    return result === true;
+  } catch (error) {
+    console.error("Ошибка обновления задачи:", error);
+    throw error;
+  }
+}
+
+/**
+ * /deleteTask  
+ * DELETE — Удаляет задачу.
+ */
+export async function deleteTask(taskId: string): Promise<boolean> {
+  const url = `/Task/deleteTask?id=${taskId}`;
+  const options: RequestInit = {
+    method: "DELETE",
+  };
+
+  try {
+    const result = await fetchData(url, options);
+    console.log("Задача удалена:", result);
+    return result === true;
+  } catch (error) {
+    console.error("Ошибка удаления задачи:", error);
     throw error;
   }
 }

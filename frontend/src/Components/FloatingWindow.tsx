@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { motion, useDragControls } from "framer-motion";
 import { Task } from "../Types/types";
+import TaskDescriptionEditor from "./TaskDescription";
+import TaskDescription from "./TaskDescription";
 
 interface FloatingWindowProps {
   task: Task;
@@ -10,9 +12,15 @@ interface FloatingWindowProps {
   isTop: boolean;
 }
 
-export default function FloatingWindow({ task, columnId, onClose, setTopWindow, isTop }: FloatingWindowProps) {
+export default function FloatingWindow({
+  task,
+  columnId,
+  onClose,
+  setTopWindow,
+  isTop,
+}: FloatingWindowProps) {
   const [pos, setPos] = useState({ x: 100, y: 100 });
-  const [size, setSize] = useState({ width: 400, height: 250 }); 
+  const [size, setSize] = useState({ width: 400, height: 250 });
   const dragControls = useDragControls();
   const [isResizing, setIsResizing] = useState(false);
 
@@ -26,6 +34,9 @@ export default function FloatingWindow({ task, columnId, onClose, setTopWindow, 
   };
 
   const handleMouseUp = () => setIsResizing(false);
+
+
+
 
   return (
     <motion.div
@@ -45,9 +56,17 @@ export default function FloatingWindow({ task, columnId, onClose, setTopWindow, 
         touchAction: "none",
       }}
     >
-      <div className="window" style={{ width: size.width, height: size.height, position: "relative", userSelect: "none" }}
+      <div
+        className="window"
+        style={{
+          width: size.width,
+          height: size.height,
+          position: "relative",
+          userSelect: "none",
+        }}
       >
-        <div className="title-bar"
+        <div
+          className="title-bar"
           onPointerDown={(e) => {
             e.stopPropagation();
             dragControls.start(e);
@@ -62,7 +81,9 @@ export default function FloatingWindow({ task, columnId, onClose, setTopWindow, 
           </div>
         </div>
         <div className="window-body body-settings">
-          Здесь может и будет находиться информация о задаче.
+          Задача "{task.title}"
+          <hr></hr>
+            <TaskDescription id={task.id}/>
         </div>
 
         {/* Уголок для ресайза */}

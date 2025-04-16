@@ -10,7 +10,7 @@ interface TaskProps {
   onTaskClick: any;
 }
 
-const TaskItem: React.FC<TaskProps> = ({ task, columnId, taskIndex, onTaskClick }) => {
+const TaskItem = ({ task, columnId, taskIndex, onTaskClick }: TaskProps) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
     id: task.id,
     data: { columnId, taskIndex, type: "task" },

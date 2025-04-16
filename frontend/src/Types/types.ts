@@ -34,6 +34,23 @@ export type TaskBodyProps = {
   created_by: string;
 }
 
+export interface TaskWithUsersDto {
+  id: string;
+  column_id: string;
+  board_id: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  position: number;
+  created_by: string;
+  assigned_to: string;
+  created_at: string;
+  updated_at: string;
+  created_by_username?: string;
+  assigned_to_username?: string;
+}
+
+
 export type Board = {
   id: string;
   name: string;

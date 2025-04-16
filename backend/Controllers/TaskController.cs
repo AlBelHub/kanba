@@ -26,6 +26,36 @@ public class TaskController : KanbaControllerBase
         return Ok(tasks);
     }
 
+    [HttpPut("updateTask/{id:guid}")]
+    public async Task<IActionResult> UpdateTask(Guid id, [FromBody] TaskProps props)
+    {
+        var success = await _taskRepository.UpdateTask(id, props);
+            
+        if (!success) return BadRequest();
+        
+        return Ok();
+    }
+
+    [HttpGet("getTaskDetail/{id:guid}")]
+    public async Task<IActionResult> GetTaskDetail(Guid id)
+    {
+        var task = await _taskRepository.getTaskDetails(id);
+        
+        if (task == null) return NotFound();
+        
+        return Ok(task);
+    }
+
+    [HttpDelete("deleteTask/{id:guid}")]
+    public async Task<IActionResult> DeleteTask(Guid id)
+    {
+        var success = await _taskRepository.DeleteTask(id);
+        
+        if (!success) return BadRequest();
+        
+        return Ok();
+    }
+    
     [HttpPost("createTask")]
     public async Task<IActionResult> CreateTask([FromBody] TaskProps props)
     {
