@@ -3,7 +3,6 @@ import App from "./App.tsx";
 import RootLayout from "./RootLayout.tsx";
 
 import { createBrowserRouter, RouterProvider } from "react-router";
-import { initApp } from "./TEMP_DELETE/InitApp.ts";
 import BoardsViewer from "./BoardsViewer.tsx";
 import LoginPage from "./Components/LoginPage.tsx";
 
@@ -19,12 +18,10 @@ const router = createBrowserRouter([
       {
         path: "/:spaceId",
         element: <BoardsViewer />,
-        loader: initApp
       },
       {
         path: "/:spaceId/:boardId",
         element: <App />, 
-        loader: initApp
       },
     ]    
   }
