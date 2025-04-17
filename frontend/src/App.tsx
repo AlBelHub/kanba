@@ -19,8 +19,9 @@ import { useLoaderData, useParams } from "react-router";
 
 function App() {
   
-  const { userId } = useLoaderData()
   const {spaceId, boardId} = useParams();
+
+  const userId = useAppStore().userId
 
   const setUserId = useAppStore((s) => s.setUserId);
   const setSpaceId = useAppStore((s) => s.setSpaceId);
@@ -28,7 +29,7 @@ function App() {
   const setBoard = useAppStore((s) => s.setBoard);
 
   useEffect(() => {
-    setUserId(userId);
+    setUserId(String(userId));
 
     if (spaceId === "undefined") {
       throw new Error("spaceId URL error")
